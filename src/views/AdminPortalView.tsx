@@ -53,7 +53,8 @@ import {
   UploadCloud,
   Calendar as CalendarIcon,
   Activity,
-  Code
+  Code,
+  Cloud
 } from 'lucide-react';
 
 interface AdminPortalViewProps {
@@ -94,6 +95,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     | 'painel-dev'
     | 'saude-firebase'
     | 'banco-dados'
+    | 'backup-drive'
     | 'arquivos-storage'
     | 'eventos-ct'
   >('visao-geral');
@@ -615,6 +617,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 >
                   <Database className="w-4 h-4 text-red-400" />
                   <span>Banco & Scanner</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('backup-drive')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'backup-drive' 
+                      ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-blue-600 text-white shadow-lg font-black' 
+                      : 'text-emerald-400 hover:text-white hover:bg-neutral-900 font-bold'
+                  }`}
+                >
+                  <Cloud className="w-4 h-4 text-emerald-400" />
+                  <span>Backup Google Drive</span>
                 </button>
 
                 <button
@@ -2412,8 +2426,8 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
         {/* TAB 13: SAÚDE DO FIREBASE */}
         {activeTab === 'saude-firebase' && <FirebaseHealthView />}
 
-        {/* TAB 14: GERENCIAMENTO DE BANCO DE DADOS & SCANNER FIREBASE */}
-        {activeTab === 'banco-dados' && <FirebaseDatabasePanel />}
+        {/* TAB 14: GERENCIAMENTO DE BANCO DE DADOS, SCANNER & BACKUP GOOGLE DRIVE */}
+        {(activeTab === 'banco-dados' || activeTab === 'backup-drive') && <FirebaseDatabasePanel />}
 
         {/* TAB 15: CENTRAL DE ARQUIVOS & FIREBASE STORAGE */}
         {activeTab === 'arquivos-storage' && <FirebaseStorageManager />}

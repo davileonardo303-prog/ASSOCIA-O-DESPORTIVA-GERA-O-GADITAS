@@ -955,6 +955,10 @@ class GaditasProductionStore {
     return false;
   }
 
+  public getCurrentUser(): UsuarioSistema | null {
+    return this.currentUser;
+  }
+
   public getAdminsGerais(): string[] {
     return Array.from(new Set([SUPER_ADMIN_EMAIL.toLowerCase(), ...this.adminEmailsList.map(e => e.toLowerCase())]));
   }
@@ -2278,6 +2282,8 @@ class GaditasProductionStore {
       versao: '5.5-production',
       projeto: 'equipe-gaditas',
       siteConfig: this.siteConfig,
+      globalScreens: this.globalScreens,
+      adminEmails: this.adminEmailsList,
       unidades: this.unidades,
       alunos: this.alunos,
       usuarios: this.usuarios,
@@ -2302,6 +2308,10 @@ class GaditasProductionStore {
 
       if (data.siteConfig) {
         await this.salvarSiteConfig(data.siteConfig);
+      }
+
+      if (data.globalScreens) {
+        await this.salvarGlobalScreens(data.globalScreens);
       }
 
       if (Array.isArray(data.alunos)) {
