@@ -15,7 +15,13 @@ import {
   SiteConfig,
   MenuItemSite,
   PaginaCustomizada,
-  StorageFolder
+  StorageFolder,
+  GlobalScreensConfig,
+  HomeScreenConfig,
+  SobreScreenConfig,
+  MatriculaScreenConfig,
+  AlunoScreenConfig,
+  GlobalSiteConfig
 } from '../types';
 import { db, auth, uploadArquivoFirebase } from './firebase';
 import { 
@@ -28,7 +34,9 @@ import {
   deleteDoc, 
   addDoc,
   query,
-  where
+  where,
+  onSnapshot,
+  serverTimestamp
 } from 'firebase/firestore';
 import { 
   signInWithEmailAndPassword, 
@@ -82,6 +90,79 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
     { id: 'm6', label: 'Portal do Aluno', viewOuLink: 'aluno-portal', visivel: true, ordem: 6 },
     { id: 'm7', label: 'Administração', viewOuLink: 'admin-portal', visivel: true, ordem: 7 }
   ]
+};
+
+export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
+  home: {
+    badge: 'Associação Desportiva Gaditas · Desde 2017',
+    tituloHero: 'FORJE SUA MELHOR VERSÃO NOS TATAMES',
+    subtituloHero: 'Luta Livre, Muay Thai Tradicional e MMA sob a liderança técnica do Mestre Daniel Braga. Unidades de alto rendimento no Rio de Janeiro.',
+    ctaPrimario: 'Matricule-se Agora',
+    ctaSecundario: 'Aula Experimental Grátis',
+    statAnosNumero: '2017',
+    statAnosTexto: 'Fundação Oficial',
+    statFaixasNumero: '+12',
+    statFaixasTexto: 'Faixas Pretas Formados',
+    statPolosNumero: '4',
+    statPolosTexto: 'Polos Ativos no RJ',
+    statMetodologiaNumero: '100%',
+    statMetodologiaTexto: 'Metodologia Projarde',
+    polosTitulo: 'NOSSOS POLOS & CENTROS DE TREINAMENTO',
+    polosSubtitulo: 'Estrutura profissional com tatames olímpicos, vestiários e professores graduados em cada CT.',
+    horariosTitulo: 'GRADE DE TREINOS OFICIAL',
+    horariosSubtitulo: 'Turmas divididas por idade, graduação e foco esportivo (iniciante ao avançado).',
+    ctaBannerTitulo: 'PRONTO PARA FORJAR SEU CARÁTER E SUA TÉCNICA?',
+    ctaBannerTexto: 'Agende hoje mesmo uma aula experimental gratuita em qualquer um dos nossos polos e vivencie a disciplina da Equipe Gaditas.',
+    ctaBannerBotao: 'Falar com o Mestre no WhatsApp'
+  },
+  sobre: {
+    tituloMestre: 'MESTRE DANIEL BRAGA',
+    subtituloMestre: 'Direção Geral e Técnica',
+    biografiaMestre: 'Com mais de duas décadas dedicadas às artes marciais e à formação de atletas e cidadãos, o Mestre Daniel Braga lidera a Equipe Gaditas Fight Team com foco absoluto em técnica apurada, respeito à hierarquia do dojo e transformação social.',
+    grauMestre: 'Muay Thai · Grau Preta e Branca',
+    historiaTitulo: 'A HISTÓRIA DA EQUIPE GADITAS',
+    historiaTexto: 'Inspirada nos guerreiros bíblicos de Gade — descritos como homens de coragem com rostos de leões e rápidos como gazelas —, a Equipe Gaditas foi fundada em 2017 pelo Mestre Daniel Braga. Nosso compromisso vai além das medalhas: formamos campeões na vida.',
+    pilar1Titulo: 'HONRA',
+    pilar1Texto: 'Respeito irrestrito aos mestres, companheiros de treino e adversários dentro e fora do tatame.',
+    pilar2Titulo: 'DISCIPLINA',
+    pilar2Texto: 'Constância diária, superação da preguiça e busca incessante pelo aperfeiçoamento físico e moral.',
+    pilar3Titulo: 'LEALDADE',
+    pilar3Texto: 'União e fraternidade verdadeira entre todos os guerreiros da família Gaditas.'
+  },
+  matricula: {
+    titulo: 'MATRÍCULA ONLINE & NOVA INSCRIÇÃO',
+    subtitulo: 'Junte-se à Equipe Gaditas. Preencha seus dados para começar a treinar no CT mais próximo.',
+    beneficio1: 'Acesso completo às aulas oficiais de Muay Thai, Jiu-Jitsu e Luta Livre',
+    beneficio2: 'Acompanhamento individual de graduação e carteirinha digital oficial de atleta',
+    beneficio3: 'Condições especiais para famílias e alunos de projetos sociais parceiros',
+    botaoTexto: 'Confirmar e Gerar Matrícula Oficial',
+    avisoTermo: 'Declaro estar apto para a prática de artes marciais de contato e comprometo-me a respeitar a hierarquia e as normas do dojo.'
+  },
+  aluno: {
+    tituloPortal: 'PORTAL DO GUERREIRO GADITAS',
+    avisoMural: 'Atenção guerreiros: mantenham a frequência regular em todas as aulas para qualificação nos exames oficiais de graduação!',
+    suporteWhatsAppTexto: 'Suporte Direto com a Coordenação',
+    linkSuporteWhatsApp: 'https://api.whatsapp.com/send?phone=5521999990001&text=Ola%20Preciso%20de%20ajuda%20no%20Portal%20do%20Aluno',
+    mostrarRanking: true,
+    mostrarGradeHorarios: true,
+    mostrarCalculadoraPeso: true
+  },
+  global: {
+    nomeSite: 'Equipe Gaditas Fight Team',
+    slogan: 'Resgatando Vidas através da Nobre Arte e do Muay Thai',
+    logoUrl: '',
+    corPrimaria: '#dc2626',
+    corDestaque: '#f59e0b',
+    chavePix: 'gaditasfightteam@gmail.com',
+    valorMensalidade: 120,
+    whatsapp: '(21) 99999-0001',
+    instagram: 'https://www.instagram.com/gaditas_fight',
+    facebook: 'https://www.facebook.com/gaditasfightteam',
+    emailContato: 'gaditasfightteam@gmail.com',
+    notificacaoTopoAtiva: true,
+    notificacaoTopoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Bangu e Seropédica!',
+    rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. Metodologia Projarde.'
+  }
 };
 
 const LOCAL_STORAGE_KEYS = {
@@ -275,15 +356,95 @@ const ALUNOS_REAIS_INICIAIS: Omit<Aluno, 'id'>[] = [
   }
 ];
 
+const DEFAULT_HORARIOS: HorarioTreino[] = [
+  {
+    id: 'h-1',
+    modalidade: 'Muay Thai Pro & Amador',
+    dias: 'Segunda, Quarta e Sexta',
+    horario: '19:30 - 21:00',
+    ct: 'Campo Grande',
+    instrutor: 'Mestre Daniel Braga',
+    nivel: 'Competição'
+  },
+  {
+    id: 'h-2',
+    modalidade: 'Luta Livre Esportiva',
+    dias: 'Terça e Quinta',
+    horario: '20:00 - 21:30',
+    ct: 'Campo Grande',
+    instrutor: 'Prof. Davi Leonardo',
+    nivel: 'Geral'
+  },
+  {
+    id: 'h-3',
+    modalidade: 'Muay Thai Kids & Juvenil',
+    dias: 'Terça e Quinta',
+    horario: '18:00 - 19:00',
+    ct: 'Campo Grande',
+    instrutor: 'Instrutora Clara',
+    nivel: 'Kids'
+  },
+  {
+    id: 'h-4',
+    modalidade: 'MMA & Striking',
+    dias: 'Segunda a Sexta',
+    horario: '07:00 - 08:30',
+    ct: 'Bangu',
+    instrutor: 'Prof. Lucas Rocha',
+    nivel: 'Geral'
+  },
+  {
+    id: 'h-5',
+    modalidade: 'Kickboxing K-1 & Boxe',
+    dias: 'Segunda, Quarta e Sexta',
+    horario: '18:30 - 20:00',
+    ct: 'Bangu',
+    instrutor: 'Prof. Lucas Rocha',
+    nivel: 'Competição'
+  },
+  {
+    id: 'h-6',
+    modalidade: 'Muay Thai Universitário',
+    dias: 'Segunda e Quarta',
+    horario: '18:00 - 19:30',
+    ct: 'Seropédica',
+    instrutor: 'Prof. Marcos Santos',
+    nivel: 'Geral'
+  },
+  {
+    id: 'h-7',
+    modalidade: 'Inclusão Marcial & Jiu-Jitsu',
+    dias: 'Sábado',
+    horario: '09:00 - 11:00',
+    ct: 'Nova Iguaçu',
+    instrutor: 'Mestre Daniel Braga',
+    nivel: 'Iniciante'
+  }
+];
+
 class GaditasProductionStore {
   public currentUser: UsuarioSistema | null = null;
   public currentAluno: Aluno | null = null;
   public impersonatedUser: { tipo: 'aluno' | 'usuario'; dados: any } | null = null;
   public authLoading: boolean = true;
   public siteConfig: SiteConfig = { ...DEFAULT_SITE_CONFIG };
+  public globalScreens: GlobalScreensConfig = { ...DEFAULT_GLOBAL_SCREENS };
+  public cmsConnectedRealtime: boolean = false;
+  public cmsLastUpdatedBy: string = 'sistema';
+  public cmsLastUpdatedAt: string = '';
 
+  private adminEmailsList: string[] = [SUPER_ADMIN_EMAIL.toLowerCase()];
   private alunos: Aluno[] = [];
-  private unidades: Unidade[] = [];
+  private unidades: Unidade[] = (() => {
+    try {
+      const cached = typeof localStorage !== 'undefined' ? localStorage.getItem('gaditas_unidades_cache') : null;
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [...INITIAL_UNIDADES_OFICIAIS];
+  })();
   private usuarios: UsuarioSistema[] = [];
   private financeiro: FinanceiroItem[] = [];
   private estoque: EstoqueItem[] = [];
@@ -298,6 +459,7 @@ class GaditasProductionStore {
 
   constructor() {
     this.carregarImpersonacaoSalva();
+    this.iniciarListenersTempoRealCMS();
     this.initAuthAndSync();
   }
 
@@ -378,11 +540,20 @@ class GaditasProductionStore {
           for (const u of INITIAL_UNIDADES_OFICIAIS) {
             await setDoc(doc(db, 'unidades', u.id), u);
           }
-          this.unidades = INITIAL_UNIDADES_OFICIAIS;
+          this.unidades = [...INITIAL_UNIDADES_OFICIAIS];
         }
+        try {
+          localStorage.setItem('gaditas_unidades_cache', JSON.stringify(this.unidades));
+        } catch {}
       } catch (eUnidades) {
         console.warn('Unidades:', eUnidades);
-        if (this.unidades.length === 0) this.unidades = INITIAL_UNIDADES_OFICIAIS;
+        if (this.unidades.length === 0) {
+          try {
+            const cached = localStorage.getItem('gaditas_unidades_cache');
+            if (cached) this.unidades = JSON.parse(cached);
+          } catch {}
+          if (this.unidades.length === 0) this.unidades = [...INITIAL_UNIDADES_OFICIAIS];
+        }
       }
 
       // 2. Alunos (Guerreiros Ativos)
@@ -577,8 +748,277 @@ class GaditasProductionStore {
     this.notify();
   }
 
+  // ===== CMS VISUAL REALTIME & GLOBAL SCREENS (cms_settings/global_screens) =====
+  private iniciarListenersTempoRealCMS() {
+    try {
+      // 1. Escuta em TEMPO REAL doc cms_settings/global_screens
+      const docScreensRef = doc(db, 'cms_settings', 'global_screens');
+      onSnapshot(docScreensRef, async (snap) => {
+        this.cmsConnectedRealtime = true;
+        if (!snap.exists()) {
+          // AUTO-INICIALIZAÇÃO (SEED): cria com valores padrão no primeiro boot
+          try {
+            await setDoc(docScreensRef, {
+              ...DEFAULT_GLOBAL_SCREENS,
+              updatedAt: serverTimestamp(),
+              updatedBy: 'sistema-auto-seed'
+            }, { merge: true });
+          } catch (seedErr) {
+            console.warn('Erro ao auto-inicializar global_screens:', seedErr);
+          }
+        } else {
+          const data = snap.data();
+          this.globalScreens = {
+            home: { ...DEFAULT_GLOBAL_SCREENS.home, ...(data.home || {}) },
+            sobre: { ...DEFAULT_GLOBAL_SCREENS.sobre, ...(data.sobre || {}) },
+            matricula: { ...DEFAULT_GLOBAL_SCREENS.matricula, ...(data.matricula || {}) },
+            aluno: { ...DEFAULT_GLOBAL_SCREENS.aluno, ...(data.aluno || {}) },
+            global: { ...DEFAULT_GLOBAL_SCREENS.global, ...(data.global || {}) },
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy || 'Administrador Geral'
+          };
+          this.cmsLastUpdatedBy = data.updatedBy || 'Administrador Geral';
+          if (data.updatedAt?.toDate) {
+            this.cmsLastUpdatedAt = data.updatedAt.toDate().toLocaleString('pt-BR');
+          } else if (typeof data.updatedAt === 'string') {
+            this.cmsLastUpdatedAt = new Date(data.updatedAt).toLocaleString('pt-BR');
+          } else {
+            this.cmsLastUpdatedAt = new Date().toLocaleString('pt-BR');
+          }
+
+          // Sincroniza retrocompatibilidade de siteConfig
+          this.siteConfig = {
+            ...this.siteConfig,
+            nomeSite: this.globalScreens.global.nomeSite,
+            slogan: this.globalScreens.global.slogan,
+            logoUrl: this.globalScreens.global.logoUrl,
+            corPrimaria: this.globalScreens.global.corPrimaria,
+            corDestaque: this.globalScreens.global.corDestaque,
+            chavePixOficial: this.globalScreens.global.chavePix,
+            valorMensalidadePadrao: this.globalScreens.global.valorMensalidade,
+            whatsappContato: this.globalScreens.global.whatsapp,
+            instagramUrl: this.globalScreens.global.instagram,
+            facebookUrl: this.globalScreens.global.facebook,
+            emailContato: this.globalScreens.global.emailContato,
+            notificacoesAtivas: this.globalScreens.global.notificacaoTopoAtiva,
+            notificacaoTexto: this.globalScreens.global.notificacaoTopoTexto,
+            rodapeTexto: this.globalScreens.global.rodapeTexto,
+            tituloHero: this.globalScreens.home.tituloHero,
+            subtituloHero: this.globalScreens.home.subtituloHero,
+            biografiaMestreDaniel: this.globalScreens.sobre.biografiaMestre,
+            historiaAcademia: this.globalScreens.sobre.historiaTexto
+          };
+
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot global_screens error:', err);
+        this.cmsConnectedRealtime = false;
+        this.notify();
+      });
+
+      // 2. Escuta em TEMPO REAL doc cms_settings/admins (RBAC)
+      const docAdminsRef = doc(db, 'cms_settings', 'admins');
+      onSnapshot(docAdminsRef, async (snap) => {
+        if (!snap.exists()) {
+          try {
+            await setDoc(docAdminsRef, {
+              emails: [SUPER_ADMIN_EMAIL.toLowerCase()],
+              updatedAt: serverTimestamp(),
+              updatedBy: 'sistema-auto-seed'
+            }, { merge: true });
+          } catch (seedErr) {
+            console.warn('Erro ao auto-inicializar admins:', seedErr);
+          }
+        } else {
+          const data = snap.data();
+          if (Array.isArray(data?.emails)) {
+            this.adminEmailsList = Array.from(new Set([SUPER_ADMIN_EMAIL.toLowerCase(), ...data.emails.map((e: string) => String(e).toLowerCase().trim())]));
+            this.notify();
+          }
+        }
+      }, (err) => {
+        console.warn('Snapshot admins error:', err);
+      });
+
+      // 3. Escuta em TEMPO REAL coleção unidades (CTs / Polos)
+      const colUnidadesRef = collection(db, 'unidades');
+      onSnapshot(colUnidadesRef, (snap) => {
+        if (!snap.empty) {
+          const lista = snap.docs.map(d => ({ id: d.id, ...d.data() } as Unidade));
+          this.unidades = lista;
+          try {
+            localStorage.setItem('gaditas_unidades_cache', JSON.stringify(lista));
+          } catch {}
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot unidades error:', err);
+      });
+
+      // 4. Escuta em TEMPO REAL coleção alunos
+      const colAlunosRef = collection(db, 'alunos');
+      onSnapshot(colAlunosRef, (snap) => {
+        if (!snap.empty) {
+          this.alunos = snap.docs.map(d => ({ id: d.id, ...d.data() } as Aluno));
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot alunos error:', err);
+      });
+
+      // 5. Escuta em TEMPO REAL coleção avisos
+      const colAvisosRef = collection(db, 'avisos');
+      onSnapshot(colAvisosRef, (snap) => {
+        if (!snap.empty) {
+          this.avisos = snap.docs.map(d => ({ id: d.id, ...d.data() } as AvisoCT));
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot avisos error:', err);
+      });
+    } catch (e) {
+      console.warn('Erro ao configurar listeners do CMS:', e);
+    }
+  }
+
+  public getGlobalScreens(): GlobalScreensConfig {
+    return this.globalScreens;
+  }
+
+  public getCmsStatus() {
+    return {
+      conectado: this.cmsConnectedRealtime,
+      updatedBy: this.cmsLastUpdatedBy,
+      updatedAt: this.cmsLastUpdatedAt
+    };
+  }
+
+  public async salvarGlobalScreens(novosDados: Partial<GlobalScreensConfig>): Promise<void> {
+    const emailAtual = this.currentUser?.email || auth.currentUser?.email || 'admin_geral';
+    const docRef = doc(db, 'cms_settings', 'global_screens');
+    
+    // Merge seguro com serverTimestamp() e updatedBy como exigido
+    const payload = {
+      ...novosDados,
+      updatedAt: serverTimestamp(),
+      updatedBy: emailAtual
+    };
+
+    await setDoc(docRef, payload, { merge: true });
+
+    // Atualiza estado local imediatamente para feedback reativo
+    this.globalScreens = {
+      ...this.globalScreens,
+      ...novosDados,
+      updatedBy: emailAtual,
+      updatedAt: new Date().toISOString()
+    };
+    this.cmsLastUpdatedBy = emailAtual;
+    this.cmsLastUpdatedAt = new Date().toLocaleString('pt-BR');
+    this.notify();
+
+    await this.registrarAuditoria(
+      'CMS_SCREENS_SALVAS',
+      `Configurações das telas atualizadas e publicadas no Firebase por ${emailAtual}`,
+      emailAtual,
+      'sistema'
+    );
+  }
+
+  public async restaurarPadraoGlobalScreens(tela?: 'todas' | 'home' | 'sobre' | 'matricula' | 'aluno' | 'global'): Promise<void> {
+    const emailAtual = this.currentUser?.email || auth.currentUser?.email || 'admin_geral';
+    const docRef = doc(db, 'cms_settings', 'global_screens');
+    
+    let payload: Partial<GlobalScreensConfig> = {};
+    if (!tela || tela === 'todas') {
+      payload = { ...DEFAULT_GLOBAL_SCREENS };
+    } else {
+      payload = { [tela]: DEFAULT_GLOBAL_SCREENS[tela] };
+    }
+
+    await setDoc(docRef, {
+      ...payload,
+      updatedAt: serverTimestamp(),
+      updatedBy: emailAtual
+    }, { merge: true });
+
+    this.notify();
+  }
+
+  // ===== RBAC: ADMINISTRADOR GERAL =====
+  public isUsuarioAdminGeral(emailOuUid?: string): boolean {
+    const email = (emailOuUid || this.currentUser?.email || auth.currentUser?.email || '').toLowerCase().trim();
+    if (email === SUPER_ADMIN_EMAIL.toLowerCase()) return true;
+    if (this.adminEmailsList.map(e => e.toLowerCase()).includes(email)) return true;
+    if (this.currentUser?.role === 'administrador_geral' || (this.currentUser as any)?.role === 'admin_geral') return true;
+    return false;
+  }
+
+  public getAdminsGerais(): string[] {
+    return Array.from(new Set([SUPER_ADMIN_EMAIL.toLowerCase(), ...this.adminEmailsList.map(e => e.toLowerCase())]));
+  }
+
+  public async adicionarAdminGeral(email: string): Promise<void> {
+    const emailLimpo = email.toLowerCase().trim();
+    if (!emailLimpo || !emailLimpo.includes('@')) {
+      throw new Error('Informe um e-mail válido para conceder permissão de Administrador Geral.');
+    }
+    const listaAtual = this.getAdminsGerais();
+    if (!listaAtual.includes(emailLimpo)) {
+      const novaLista = [...listaAtual, emailLimpo];
+      await setDoc(doc(db, 'cms_settings', 'admins'), {
+        emails: novaLista,
+        updatedAt: serverTimestamp(),
+        updatedBy: this.currentUser?.email || 'admin_geral'
+      }, { merge: true });
+
+      // Atualiza também nas coleções users/{uid} ou usuarios/{id} para redundância total
+      try {
+        const snap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', emailLimpo)));
+        for (const d of snap.docs) {
+          await setDoc(doc(db, 'usuarios', d.id), { role: 'administrador_geral' }, { merge: true });
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar role do usuário:', e);
+      }
+
+      this.adminEmailsList = novaLista;
+      this.notify();
+    }
+  }
+
+  public async removerAdminGeral(email: string): Promise<void> {
+    const emailLimpo = email.toLowerCase().trim();
+    if (emailLimpo === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      throw new Error('O Desenvolvedor / Criador oficial do sistema não pode ser removido do ciclo de Administrador Geral.');
+    }
+    const listaAtual = this.getAdminsGerais().filter(e => e !== emailLimpo);
+    await setDoc(doc(db, 'cms_settings', 'admins'), {
+      emails: listaAtual,
+      updatedAt: serverTimestamp(),
+      updatedBy: this.currentUser?.email || 'admin_geral'
+    }, { merge: true });
+
+    try {
+      const snap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', emailLimpo)));
+      for (const d of snap.docs) {
+        await setDoc(doc(db, 'usuarios', d.id), { role: 'professor' }, { merge: true });
+      }
+    } catch (e) {
+      console.warn('Erro ao atualizar role:', e);
+    }
+
+    this.adminEmailsList = listaAtual;
+    this.notify();
+  }
+
   // ===== PÁGINAS CUSTOMIZADAS (CMS) =====
   public getPaginas(): PaginaCustomizada[] {
+    return this.paginas;
+  }
+
+  public getPaginasCustomizadas(): PaginaCustomizada[] {
     return this.paginas;
   }
 
@@ -643,6 +1083,13 @@ class GaditasProductionStore {
 
   public isImpersonando(): boolean {
     return this.impersonatedUser !== null;
+  }
+
+  public getUsuarioImpersonado(): UsuarioSistema | null {
+    if (this.impersonatedUser && this.impersonatedUser.tipo === 'usuario') {
+      return this.impersonatedUser.dados as UsuarioSistema;
+    }
+    return null;
   }
 
   // ===== SESSÃO & GETTERS =====
@@ -1156,6 +1603,47 @@ class GaditasProductionStore {
     this.notify();
   }
 
+  public async darBaixaMensalidade(alunoId: string, forma = 'Pix') {
+    const hoje = new Date();
+    return this.registrarPagamentoMensalidade(alunoId, hoje.getMonth(), hoje.getFullYear());
+  }
+
+  public gerarLinkWhatsAppCobranca(aluno: Aluno): string {
+    const fone = (aluno.telefone || '').replace(/\D/g, '');
+    const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const mesAtual = meses[new Date().getMonth()];
+    const msg = encodeURIComponent(
+      `Olá Guerreiro(a) ${aluno.nome}! Passando para lembrar da sua mensalidade de ${mesAtual} da Equipe Gaditas (Polo ${aluno.ct}). Chave PIX Oficial: ${this.siteConfig.chavePixOficial || 'equipegaditas@gmail.com'}. Oss!`
+    );
+    return `https://wa.me/55${fone}?text=${msg}`;
+  }
+
+  public async atualizarMedidas(alunoId: string, pesoKg: number, alturaCm: number) {
+    await updateDoc(doc(db, 'alunos', alunoId), { peso_kg: pesoKg, altura_cm: alturaCm });
+    this.alunos = this.alunos.map(a => a.id === alunoId ? { ...a, peso_kg: pesoKg, altura_cm: alturaCm } : a);
+    if (this.currentAluno?.id === alunoId) {
+      this.currentAluno.peso_kg = pesoKg;
+      this.currentAluno.altura_cm = alturaCm;
+    }
+    this.notify();
+  }
+
+  public async atualizarFotoAluno(alunoId: string, fotoUrl: string) {
+    await updateDoc(doc(db, 'alunos', alunoId), { foto_url: fotoUrl });
+    this.alunos = this.alunos.map(a => a.id === alunoId ? { ...a, foto_url: fotoUrl } : a);
+    if (this.currentAluno?.id === alunoId) {
+      this.currentAluno.foto_url = fotoUrl;
+    }
+    this.notify();
+  }
+
+  public getHorarios(ct?: string): HorarioTreino[] {
+    if (ct && ct !== 'GERAL') {
+      return DEFAULT_HORARIOS.filter(h => h.ct.toLowerCase() === ct.toLowerCase());
+    }
+    return DEFAULT_HORARIOS;
+  }
+
   public async excluirAluno(id: string) {
     const aluno = this.alunos.find(a => a.id === id);
     await deleteDoc(doc(db, 'alunos', id));
@@ -1192,18 +1680,55 @@ class GaditasProductionStore {
     return u?.tipo === 'bolsista';
   }
 
-  public async adicionarUnidade(nome: string, tipo: 'pagante' | 'bolsista', responsavel?: string, endereco?: string, telefone?: string) {
-    const id = 'uni-' + nome.toLowerCase().replace(/\s+/g, '-');
-    const item: Unidade = { id, nome, tipo, responsavel, endereco, telefone };
-    await setDoc(doc(db, 'unidades', id), item);
-    this.unidades.push(item);
-    await this.registrarAuditoria('CRIAR_UNIDADE', `Polo ${nome} (${tipo}) cadastrado`, this.currentUser?.email || 'admin', 'alteracao');
+  public async adicionarUnidade(nome: string, tipo: 'pagante' | 'bolsista', responsavel?: string, endereco?: string, telefone?: string): Promise<Unidade> {
+    const nomeLimpo = nome.trim();
+    const slug = nomeLimpo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    const id = 'uni-' + (slug || Date.now());
+    const item: Unidade = {
+      id,
+      nome: nomeLimpo,
+      tipo,
+      responsavel: responsavel?.trim() || 'Equipe Técnica Gaditas',
+      endereco: endereco?.trim() || 'Tatame oficial, ringue e estrutura para treinamento',
+      telefone: telefone?.trim() || '(21) 99999-0000'
+    };
+
+    const index = this.unidades.findIndex(u => u.id === id || u.nome.toLowerCase() === nomeLimpo.toLowerCase());
+    if (index >= 0) {
+      this.unidades[index] = item;
+    } else {
+      this.unidades.push(item);
+    }
+
+    try {
+      localStorage.setItem('gaditas_unidades_cache', JSON.stringify(this.unidades));
+    } catch {}
+
+    try {
+      await setDoc(doc(db, 'unidades', id), {
+        ...item,
+        updatedAt: serverTimestamp(),
+        updatedBy: this.currentUser?.email || 'admin_geral'
+      }, { merge: true });
+    } catch (err) {
+      console.warn('Erro ao salvar unidade no Firestore (mantido localmente):', err);
+    }
+
+    await this.registrarAuditoria('CRIAR_UNIDADE', `Polo ${nomeLimpo} (${tipo}) cadastrado`, this.currentUser?.email || 'admin', 'alteracao');
     this.notify();
+    return item;
   }
 
   public async removerUnidade(id: string) {
-    await deleteDoc(doc(db, 'unidades', id));
+    try {
+      await deleteDoc(doc(db, 'unidades', id));
+    } catch (err) {
+      console.warn('Erro ao deletar unidade do Firestore:', err);
+    }
     this.unidades = this.unidades.filter(u => u.id !== id);
+    try {
+      localStorage.setItem('gaditas_unidades_cache', JSON.stringify(this.unidades));
+    } catch {}
     await this.registrarAuditoria('EXCLUIR_UNIDADE', `Polo ${id} removido`, this.currentUser?.email || 'admin', 'exclusao');
     this.notify();
   }

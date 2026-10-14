@@ -21,6 +21,18 @@ service cloud.firestore {
       allow create, update, delete: if true;
     }
 
+    // Configurações do Painel CMS & Administradores Gerais
+    match /cms_settings/{document=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Coleção Usuários (users)
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // Coleção Usuários do Sistema & Perfis Administrativos
     match /usuarios/{userId} {
       allow read: if true;

@@ -23,6 +23,7 @@ import {
   BarChart3, 
   Archive, 
   Building2, 
+  MapPin,
   UserCog, 
   Settings, 
   LogOut, 
@@ -105,11 +106,12 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   }, []);
 
   const currentCT = adminLogado?.ct || 'GERAL';
-  const isAdminGeral = adminLogado?.isAdmin ?? true;
+  const isAdminGeral = store.isUsuarioAdminGeral() || adminLogado?.isAdmin || adminLogado?.role === 'admin_geral' || adminLogado?.role === 'administrador_geral';
 
   // Estados dos Módulos
   const [buscaAluno, setBuscaAluno] = useState('');
   const [filtroCT, setFiltroCT] = useState(currentCT);
+  const [filtroStatusCadastral, setFiltroStatusCadastral] = useState<'todos' | 'ativo' | 'pendente' | 'inativo'>('todos');
   const [filtroStatusFin, setFiltroStatusFin] = useState<'todos' | 'em-dia' | 'pendente' | 'bolsista'>('todos');
 
   // Chamada Digital
@@ -144,6 +146,10 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   // Formulário de Nova Unidade
   const [novaUniNome, setNovaUniNome] = useState('');
   const [novaUniTipo, setNovaUniTipo] = useState<'pagante' | 'bolsista'>('pagante');
+  const [novaUniResp, setNovaUniResp] = useState('');
+  const [novaUniEnd, setNovaUniEnd] = useState('');
+  const [novaUniTel, setNovaUniTel] = useState('');
+  const [salvandoUni, setSalvandoUni] = useState(false);
 
   // Formulário de Novo Professor
   const [novoProfNome, setNovoProfNome] = useState('');
@@ -351,28 +357,35 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     ? Math.round((alunosAtivos.length / (alunosAtivos.length + alunosInativos.length)) * 100)
     : 100;
 
-  // Filtragem Robusta de Lista de Alunos (Guerreiros Ativos)
+  // Filtragem Robusta e Imediata de Lista de Alunos (Guerreiros Ativos)
   const alunosFiltrados = todosAlunos.filter(a => {
     const termo = buscaAluno.toLowerCase().trim();
     const termoLimpo = termo.replace('#', '');
+    const digitosBusca = termo.replace(/\D/g, '');
     
     const matchTermo = !termo ||
       (a.nome || '').toLowerCase().includes(termo) ||
-      (a.matricula ? a.matricula.toString().includes(termoLimpo) : false) ||
+      (a.matricula ? String(a.matricula).includes(termoLimpo) : false) ||
       (a.email || '').toLowerCase().includes(termo) ||
-      (a.telefone || '').includes(termo) ||
-      (a.cpf || '').includes(termo) ||
-      (a.ct || '').toLowerCase().includes(termo);
-    
-    if (a.status === 'inativo') return false;
+      (digitosBusca.length >= 3 && (a.telefone || '').replace(/\D/g, '').includes(digitosBusca)) ||
+      (digitosBusca.length >= 3 && (a.cpf || '').replace(/\D/g, '').includes(digitosBusca)) ||
+      (a.ct || '').toLowerCase().includes(termo) ||
+      (a.faixa || '').toLowerCase().includes(termo);
+
+    if (!matchTermo) return false;
+
+    // Filtro por Situação Cadastral
+    if (filtroStatusCadastral === 'ativo' && a.status !== 'ativo') return false;
+    if (filtroStatusCadastral === 'pendente' && a.status !== 'pendente') return false;
+    if (filtroStatusCadastral === 'inativo' && a.status !== 'inativo') return false;
 
     const isBolsista = store.isUnidadeBolsista(a.ct);
     const isPago = isBolsista || (a.ultimo_mes_pago === mesAtual && a.ultimo_ano_pago === anoAtual);
 
-    if (filtroStatusFin === 'em-dia') return matchTermo && isPago && !isBolsista;
-    if (filtroStatusFin === 'pendente') return matchTermo && !isPago && !isBolsista;
-    if (filtroStatusFin === 'bolsista') return matchTermo && isBolsista;
-    return matchTermo;
+    if (filtroStatusFin === 'em-dia') return isPago && !isBolsista;
+    if (filtroStatusFin === 'pendente') return !isPago && !isBolsista;
+    if (filtroStatusFin === 'bolsista') return isBolsista;
+    return true;
   });
 
   // Alunos para Chamada Digital
@@ -992,13 +1005,25 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 />
               </div>
 
+              {/* Filtro de Situação Cadastral */}
+              <select
+                value={filtroStatusCadastral}
+                onChange={e => setFiltroStatusCadastral(e.target.value as any)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-bold uppercase focus:outline-none cursor-pointer"
+              >
+                <option value="todos">STATUS: TODOS</option>
+                <option value="ativo">STATUS: ATIVOS</option>
+                <option value="pendente">STATUS: PENDENTES</option>
+                <option value="inativo">STATUS: INATIVOS</option>
+              </select>
+
               {/* Filtro de Status Financeiro */}
               <select
                 value={filtroStatusFin}
                 onChange={e => setFiltroStatusFin(e.target.value as any)}
                 className="px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-bold uppercase focus:outline-none cursor-pointer"
               >
-                <option value="todos">TODAS AS SITUAÇÕES</option>
+                <option value="todos">MENSALIDADE: TODAS</option>
                 <option value="em-dia">APENAS EM DIA</option>
                 <option value="pendente">APENAS PENDENTES</option>
                 <option value="bolsista">APENAS BOLSISTAS</option>
@@ -1010,11 +1035,26 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   onChange={e => setFiltroCT(e.target.value)}
                   className="px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-bold uppercase focus:outline-none cursor-pointer"
                 >
-                  <option value="GERAL">TODOS OS POLOS</option>
+                  <option value="GERAL">POLO: TODOS</option>
                   {unidades.map(u => (
                     <option key={u.id} value={u.nome}>{u.nome.toUpperCase()}</option>
                   ))}
                 </select>
+              )}
+            </div>
+
+            {/* Contador de Guerreiros */}
+            <div className="flex items-center justify-between text-xs text-neutral-400 px-1">
+              <span>
+                Exibindo <strong className="text-white font-mono">{alunosFiltrados.length}</strong> de <strong className="text-white font-mono">{todosAlunos.length}</strong> guerreiros cadastrados
+              </span>
+              {buscaAluno && (
+                <button
+                  onClick={() => setBuscaAluno('')}
+                  className="text-red-400 hover:underline cursor-pointer text-[11px]"
+                >
+                  Limpar busca
+                </button>
               )}
             </div>
 
@@ -2063,42 +2103,97 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             </div>
 
             {/* Criar Unidade */}
-            <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
-              <h3 className="text-xs font-black uppercase text-red-400 tracking-wider">
-                Cadastrar Novo CT
+            <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4 shadow-xl">
+              <h3 className="text-xs font-black uppercase text-red-400 tracking-wider flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                <span>Cadastrar Novo Centro de Treinamento (Polo)</span>
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
                 <div>
+                  <label className="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Nome do CT / Polo *</label>
                   <input
                     type="text"
                     value={novaUniNome}
                     onChange={e => setNovaUniNome(e.target.value)}
-                    placeholder="Nome da unidade (Ex: Nova Friburgo...)"
-                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
+                    placeholder="Ex: Nova Friburgo, Recreio, Madureira..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
                   />
                 </div>
+
                 <div>
+                  <label className="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Regime Financeiro</label>
                   <select
                     value={novaUniTipo}
                     onChange={e => setNovaUniTipo(e.target.value as any)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white focus:border-red-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="pagante">Regime Pagante (Padrão)</option>
-                    <option value="bolsista">Regime Social / Bolsista (Isento)</option>
+                    <option value="pagante">Regime Pagante (Mensalidade Regular)</option>
+                    <option value="bolsista">Regime Social / Bolsista (100% Isento)</option>
                   </select>
                 </div>
+
                 <div>
+                  <label className="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Professor Responsável / Líder</label>
+                  <input
+                    type="text"
+                    value={novaUniResp}
+                    onChange={e => setNovaUniResp(e.target.value)}
+                    placeholder="Ex: Mestre Daniel Braga, Prof. Anderson..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Endereço / Localização</label>
+                  <input
+                    type="text"
+                    value={novaUniEnd}
+                    onChange={e => setNovaUniEnd(e.target.value)}
+                    placeholder="Ex: Rua das Flores, 120 - Centro"
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-neutral-400 font-bold uppercase block mb-1">Telefone / WhatsApp do Polo</label>
+                  <input
+                    type="text"
+                    value={novaUniTel}
+                    onChange={e => setNovaUniTel(e.target.value)}
+                    placeholder="Ex: (21) 98888-0000"
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-end">
                   <button
+                    disabled={salvandoUni}
                     onClick={async () => {
                       if (!novaUniNome.trim()) return alert('Informe o nome da unidade.');
-                      await store.adicionarUnidade(novaUniNome.trim(), novaUniTipo);
-                      setNovaUniNome('');
-                      alert('Unidade cadastrada com sucesso!');
+                      setSalvandoUni(true);
+                      try {
+                        await store.adicionarUnidade(
+                          novaUniNome.trim(), 
+                          novaUniTipo, 
+                          novaUniResp.trim(), 
+                          novaUniEnd.trim(), 
+                          novaUniTel.trim()
+                        );
+                        setNovaUniNome('');
+                        setNovaUniResp('');
+                        setNovaUniEnd('');
+                        setNovaUniTel('');
+                        alert(`✓ Polo "${novaUniNome.trim()}" cadastrado com sucesso! Já sincronizado na página inicial e formulário de matrículas.`);
+                      } catch (err: any) {
+                        alert('Erro ao cadastrar unidade: ' + err?.message);
+                      } finally {
+                        setSalvandoUni(false);
+                      }
                     }}
-                    className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-wider cursor-pointer transition-colors"
+                    className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black uppercase tracking-wider cursor-pointer transition-colors shadow-lg shadow-red-950/60"
                   >
-                    Adicionar Polo
+                    {salvandoUni ? 'Cadastrando...' : '+ Cadastrar Polo'}
                   </button>
                 </div>
               </div>
@@ -2107,12 +2202,31 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             {/* Lista de Polos */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {unidades.map(u => (
-                <div key={u.id} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
-                  <div>
-                    <h4 className="text-base font-black uppercase text-white">{u.nome}</h4>
-                    <span className={`text-[10px] font-bold uppercase ${u.tipo === 'bolsista' ? 'text-emerald-400' : 'text-blue-400'}`}>
-                      Regime: {u.tipo === 'bolsista' ? 'Social Bolsista (Isento)' : 'Mensalidade Padrão'}
-                    </span>
+                <div key={u.id} className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-base font-black uppercase text-white">{u.nome}</h4>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                        u.tipo === 'bolsista' ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40' : 'bg-blue-950 text-blue-400 border border-blue-500/40'
+                      }`}>
+                        {u.tipo === 'bolsista' ? 'Social Bolsista' : 'Mensalidade Padrão'}
+                      </span>
+                    </div>
+                    {u.responsavel && (
+                      <span className="text-[11px] text-neutral-300 block">
+                        Liderança: <strong className="text-white">{u.responsavel}</strong>
+                      </span>
+                    )}
+                    {u.endereco && (
+                      <span className="text-[10px] text-neutral-400 block">
+                        📍 {u.endereco}
+                      </span>
+                    )}
+                    {u.telefone && (
+                      <span className="text-[10px] text-amber-400 font-mono block">
+                        📞 {u.telefone}
+                      </span>
+                    )}
                   </div>
 
                   <button
@@ -2121,7 +2235,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                         await store.removerUnidade(u.id);
                       }
                     }}
-                    className="p-2 rounded-lg bg-neutral-950 hover:bg-red-950 hover:text-red-400 text-neutral-500 transition-colors"
+                    className="p-2 rounded-lg bg-neutral-950 hover:bg-red-950 hover:text-red-400 text-neutral-500 transition-colors shrink-0"
                     title="Remover Unidade"
                   >
                     <Trash2 className="w-4 h-4" />

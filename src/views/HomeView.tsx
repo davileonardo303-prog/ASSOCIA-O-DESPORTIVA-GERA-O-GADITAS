@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
-import { HorarioTreino } from '../types';
+import { HorarioTreino, Unidade } from '../types';
 import { 
   Shield, 
   ArrowRight, 
@@ -16,8 +16,8 @@ import {
   MessageCircle, 
   Dumbbell, 
   Check, 
-  Sparkles,
-  Trophy
+  Sparkles, 
+  Trophy 
 } from 'lucide-react';
 import heroRingImg from '../assets/images/gaditas_hero_ring_1791983055353.jpg';
 import lionEmblemImg from '../assets/images/gaditas_lion_emblem_1791983074366.jpg';
@@ -28,12 +28,28 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
-  const unidades = store.getUnidades();
-  const [poloHorario, setPoloHorario] = useState<string>('Campo Grande');
+  const [unidades, setUnidades] = useState<Unidade[]>(() => store.getUnidades());
+  const [poloHorario, setPoloHorario] = useState<string>(() => store.getUnidades()[0]?.nome || 'Campo Grande');
+  const [homeConfig, setHomeConfig] = useState(() => store.getGlobalScreens().home);
+  const [globalConfig, setGlobalConfig] = useState(() => store.getGlobalScreens().global);
+
+  useEffect(() => {
+    const unsub = store.subscribe(() => {
+      const u = store.getUnidades();
+      setUnidades([...u]);
+      setHomeConfig(store.getGlobalScreens().home);
+      setGlobalConfig(store.getGlobalScreens().global);
+      if (u.length > 0 && !u.some(x => x.nome.toLowerCase() === poloHorario.toLowerCase())) {
+        setPoloHorario(u[0].nome);
+      }
+    });
+    return unsub;
+  }, [poloHorario]);
 
   const horarios = store.getHorarios(poloHorario);
 
-  const whatsappDojoUrl = `https://api.whatsapp.com/send?phone=5521999990001&text=${encodeURIComponent(
+  const cleanPhone = (globalConfig.whatsapp || '5521999990001').replace(/\D/g, '');
+  const whatsappDojoUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(
     'Olá Mestre Daniel! Gostaria de agendar uma aula experimental gratuita na Equipe Gaditas. Como posso iniciar?'
   )}`;
 
@@ -59,18 +75,20 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-900/90 border border-neutral-700/80 backdrop-blur-md shadow-lg shadow-black/50">
             <Shield className="w-4 h-4 text-amber-400" />
             <span className="text-xs uppercase font-extrabold tracking-widest text-neutral-200">
-              Associação Desportiva Gaditas · Desde 2017
+              {homeConfig.badge || 'Associação Desportiva Gaditas · Desde 2017'}
             </span>
           </div>
 
           {/* Título Principal de Impacto */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-black uppercase tracking-tight text-white leading-none">
-            FORJE SUA <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-red-600 to-amber-500">MELHOR VERSÃO</span> NOS TATAMES
+            {homeConfig.tituloHero || 'FORJE SUA MELHOR VERSÃO NOS TATAMES'}
           </h1>
 
           {/* Subtítulo Claro e Direto */}
           <p className="max-w-2xl mx-auto text-base sm:text-lg text-neutral-300 font-normal leading-relaxed">
-            Luta Livre, Muay Thai Tradicional e MMA sob a liderança técnica do <strong className="text-white">Mestre Daniel Braga</strong>. Unidades em Campo Grande, Bangu, Seropédica e Nova Iguaçu.
+            {homeConfig.subtituloHero || (
+              <>Luta Livre, Muay Thai Tradicional e MMA sob a liderança técnica do <strong className="text-white">Mestre Daniel Braga</strong>. Unidades ativas em {unidades.map(u => u.nome).join(', ')}.</>
+            )}
           </p>
 
           {/* Ações Primárias */}
@@ -79,7 +97,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               onClick={() => onNavigate('matricula')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-sm uppercase tracking-wider shadow-xl shadow-red-950/60 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-3 cursor-pointer"
             >
-              <span>Matricule-se Agora</span>
+              <span>{homeConfig.ctaPrimario || 'Matricule-se Agora'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -90,27 +108,43 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 font-bold text-sm uppercase tracking-wider backdrop-blur-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle className="w-4 h-4 text-emerald-400" />
-              <span>Aula Experimental Grátis</span>
+              <span>{homeConfig.ctaSecundario || 'Aula Experimental Grátis'}</span>
             </a>
           </div>
 
           {/* Faixa de Números / Prova Social Adjacente */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-10 border-t border-neutral-800/80">
             <div className="p-4 rounded-xl bg-neutral-950/50 border border-neutral-800 backdrop-blur-sm">
-              <span className="block text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">2017</span>
-              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">Fundação Oficial</span>
+              <span className="block text-2xl sm:text-3xl font-black text-white font-mono tabular-nums">
+                {homeConfig.statAnosNumero || '2017'}
+              </span>
+              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">
+                {homeConfig.statAnosTexto || 'Fundação Oficial'}
+              </span>
             </div>
             <div className="p-4 rounded-xl bg-neutral-950/50 border border-neutral-800 backdrop-blur-sm">
-              <span className="block text-2xl sm:text-3xl font-black text-amber-400 font-mono tabular-nums">+12</span>
-              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">Faixas Pretas Formados</span>
+              <span className="block text-2xl sm:text-3xl font-black text-amber-400 font-mono tabular-nums">
+                {homeConfig.statFaixasNumero || '+12'}
+              </span>
+              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">
+                {homeConfig.statFaixasTexto || 'Faixas Pretas Formados'}
+              </span>
             </div>
             <div className="p-4 rounded-xl bg-neutral-950/50 border border-neutral-800 backdrop-blur-sm">
-              <span className="block text-2xl sm:text-3xl font-black text-red-500 font-mono tabular-nums">4</span>
-              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">Polos Ativos no RJ</span>
+              <span className="block text-2xl sm:text-3xl font-black text-red-500 font-mono tabular-nums">
+                {homeConfig.statPolosNumero && homeConfig.statPolosNumero !== '4' ? homeConfig.statPolosNumero : unidades.length}
+              </span>
+              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">
+                {homeConfig.statPolosTexto || 'Polos Ativos no RJ'}
+              </span>
             </div>
             <div className="p-4 rounded-xl bg-neutral-950/50 border border-neutral-800 backdrop-blur-sm">
-              <span className="block text-2xl sm:text-3xl font-black text-emerald-400 font-mono tabular-nums">100%</span>
-              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">Metodologia Projarde</span>
+              <span className="block text-2xl sm:text-3xl font-black text-emerald-400 font-mono tabular-nums">
+                {homeConfig.statMetodologiaNumero || '100%'}
+              </span>
+              <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">
+                {homeConfig.statMetodologiaTexto || 'Metodologia Projarde'}
+              </span>
             </div>
           </div>
 
@@ -308,83 +342,61 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             Rede de Treinamento
           </span>
           <h2 className="text-3xl sm:text-4xl font-black uppercase text-white">
-            NOSSOS POLOS & CENTROS DE TREINAMENTO
+            {homeConfig.polosTitulo || 'NOSSOS POLOS & CENTROS DE TREINAMENTO'}
           </h2>
           <p className="text-neutral-400 text-sm">
-            Encontre a unidade mais próxima de você e agende uma aula experimental gratuita.
+            {homeConfig.polosSubtitulo || 'Encontre a unidade mais próxima de você e agende uma aula experimental gratuita.'}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-red-500/50 transition-all flex flex-col justify-between space-y-4">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
-                <MapPin className="w-5 h-5" />
+          {unidades.map((u, idx) => {
+            const isSocial = u.tipo === 'bolsista';
+            return (
+              <div
+                key={u.id || idx}
+                className={`p-6 rounded-2xl bg-neutral-900/80 border transition-all flex flex-col justify-between space-y-4 ${
+                  isSocial 
+                    ? 'border-emerald-500/40 hover:border-emerald-500' 
+                    : idx === 0 
+                    ? 'border-red-500/40 hover:border-red-500' 
+                    : 'border-neutral-800 hover:border-red-500/50'
+                }`}
+              >
+                <div>
+                  <div className={`w-10 h-10 rounded-xl border flex items-center justify-center mb-4 ${
+                    isSocial 
+                      ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400' 
+                      : 'bg-red-950/60 border-red-500/30 text-red-400'
+                  }`}>
+                    {isSocial ? <Award className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+                  </div>
+                  <span className={`text-[10px] uppercase font-bold ${
+                    isSocial ? 'text-emerald-400' : idx === 0 ? 'text-amber-400' : 'text-neutral-400'
+                  }`}>
+                    {isSocial ? 'Polo Social & Bolsistas' : idx === 0 ? 'Sede Principal' : 'Centro de Treinamento'}
+                  </span>
+                  <h3 className="text-lg font-black uppercase text-white mt-1">{u.nome}</h3>
+                  <p className="text-xs text-neutral-400 mt-2">
+                    {u.endereco || 'Tatame oficial, ringue de combate e preparação física de alto nível.'}
+                  </p>
+                </div>
+                <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-300 space-y-1">
+                  <span className="block font-semibold">
+                    {isSocial ? 'Regime Social 100% Isento' : 'Regime Mensalidade Regular'}
+                  </span>
+                  <span className="text-[11px] text-neutral-400 block">
+                    {u.responsavel ? `Liderança: ${u.responsavel}` : 'Liderança Técnica Oficial'}
+                  </span>
+                  {u.telefone && (
+                    <span className="text-[10px] text-amber-400 font-mono block">
+                      Contato: {u.telefone}
+                    </span>
+                  )}
+                </div>
               </div>
-              <span className="text-[10px] uppercase font-bold text-amber-400">Sede Principal</span>
-              <h3 className="text-lg font-black uppercase text-white mt-1">Campo Grande</h3>
-              <p className="text-xs text-neutral-400 mt-2">
-                Tatame olímpico completo, ringue oficial e preparação física para todos os níveis.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-300">
-              <span className="block font-semibold">Horários: Seg a Sex · 18h às 22h</span>
-              <span className="text-[11px] text-neutral-400">Liderança: Mestre Daniel Braga</span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-red-500/50 transition-all flex flex-col justify-between space-y-4">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold text-neutral-400">Polo de Elite</span>
-              <h3 className="text-lg font-black uppercase text-white mt-1">Bangu</h3>
-              <p className="text-xs text-neutral-400 mt-2">
-                Turmas infantis, femininas e equipe de competição de alto rendimento.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-300">
-              <span className="block font-semibold">Horários: Ter e Qui · 19h às 21h30</span>
-              <span className="text-[11px] text-neutral-400">Professor: Lucas Rocha</span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-red-500/50 transition-all flex flex-col justify-between space-y-4">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-red-950/60 border border-red-500/30 flex items-center justify-center text-red-400 mb-4">
-                <MapPin className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold text-neutral-400">Polo Universitário</span>
-              <h3 className="text-lg font-black uppercase text-white mt-1">Seropédica</h3>
-              <p className="text-xs text-neutral-400 mt-2">
-                Foco em Luta Livre, Muay Thai e formação marcial para a comunidade acadêmica e regional.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-300">
-              <span className="block font-semibold">Horários: Seg, Qua e Sex · 19h</span>
-              <span className="text-[11px] text-neutral-400">Professor: Marcos Santos</span>
-            </div>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-neutral-900/80 border border-neutral-800 hover:border-emerald-500/50 transition-all flex flex-col justify-between space-y-4">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
-                <Award className="w-5 h-5" />
-              </div>
-              <span className="text-[10px] uppercase font-bold text-emerald-400">Polo Social & Bolsistas</span>
-              <h3 className="text-lg font-black uppercase text-white mt-1">Nova Iguaçu</h3>
-              <p className="text-xs text-neutral-400 mt-2">
-                Berço de fundação da equipe. Projeto social de inclusão e formação de novos guerreiros.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-neutral-800/80 text-xs text-neutral-300">
-              <span className="block font-semibold">Regime Social 100% Isento</span>
-              <span className="text-[11px] text-emerald-400 font-bold">Associação Desportiva Gaditas</span>
-            </div>
-          </div>
-
+            );
+          })}
         </div>
       </section>
 
@@ -396,10 +408,10 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               Matrículas Abertas para Todas as Idades
             </span>
             <h2 className="text-2xl sm:text-4xl font-black uppercase text-white leading-tight">
-              PRONTO PARA COMEÇAR SUA JORNADA DE GUERREIRO?
+              {homeConfig.ctaBannerTitulo || 'PRONTO PARA COMEÇAR SUA JORNADA DE GUERREIRO?'}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed">
-              Preencha o cadastro online em 2 minutos. Receba seu número de matrícula instantaneamente e comece a treinar na unidade mais próxima.
+              {homeConfig.ctaBannerTexto || 'Preencha o cadastro online em 2 minutos. Receba seu número de matrícula instantaneamente e comece a treinar na unidade mais próxima.'}
             </p>
           </div>
 
@@ -408,7 +420,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               onClick={() => onNavigate('matricula')}
               className="w-full sm:w-auto px-8 py-4 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/50 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Fazer Matrícula Online</span>
+              <span>{homeConfig.ctaBannerBotao || 'Fazer Matrícula Online'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button

@@ -9,16 +9,29 @@ import { EnrollmentView } from './views/EnrollmentView';
 import { StudentPortalView } from './views/StudentPortalView';
 import { AdminPortalView } from './views/AdminPortalView';
 import { FirebaseHealthView } from './components/FirebaseHealthView';
+import { DeveloperCmsPanel } from './components/DeveloperCmsPanel';
+import { CustomPageView } from './views/CustomPageView';
+import { PaginaCustomizada } from './types';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('home');
   const [alunoLogado, setAlunoLogado] = useState(store.getAlunoLogado());
   const [adminLogado, setAdminLogado] = useState(store.getAdminSession());
+  const [paginasCustom, setPaginasCustom] = useState<PaginaCustomizada[]>(store.getPaginasCustomizadas());
 
   useEffect(() => {
+    const config = store.getSiteConfig();
+    if (config?.nomeSite) {
+      document.title = `${config.nomeSite} - CT de Elite & Sistema de Gestão`;
+    }
     const unsub = store.subscribe(() => {
       setAlunoLogado(store.getAlunoLogado());
       setAdminLogado(store.getAdminSession());
+      setPaginasCustom(store.getPaginasCustomizadas());
+      const cfg = store.getSiteConfig();
+      if (cfg?.nomeSite) {
+        document.title = `${cfg.nomeSite} - CT de Elite & Sistema de Gestão`;
+      }
     });
     return unsub;
   }, []);
@@ -43,6 +56,10 @@ export default function App() {
   };
 
   const isErpView = currentView === 'admin-portal' && adminLogado !== null;
+
+  // Página Customizada CMS
+  const customPageSlug = currentView.startsWith('pagina-') ? currentView.replace('pagina-', '') : null;
+  const customPage = customPageSlug ? paginasCustom.find((p: PaginaCustomizada) => p.slug === customPageSlug) : null;
 
   return (
     <div className="min-h-screen bg-[#070708] text-white flex flex-col font-sans selection:bg-red-600 selection:text-white">
@@ -90,6 +107,31 @@ export default function App() {
             </div>
             <FirebaseHealthView />
           </div>
+        )}
+
+        {(currentView === 'painel-dev' || currentView === 'cms') && (
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+              <button
+                onClick={() => handleNavigate('home')}
+                className="text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                ← Voltar para o Site Oficial
+              </button>
+              <span className="text-[11px] font-mono text-amber-400 uppercase">
+                Modo Desenvolvedor & CMS Interativo
+              </span>
+            </div>
+            <DeveloperCmsPanel />
+          </div>
+        )}
+
+        {/* Exibição de Páginas Customizadas Criadas no CMS */}
+        {customPage && (
+          <CustomPageView
+            pagina={customPage}
+            onVoltar={() => handleNavigate('home')}
+          />
         )}
       </div>
 

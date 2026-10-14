@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
 import { Unidade, Aluno } from '../types';
 import confetti from 'canvas-confetti';
@@ -9,18 +9,31 @@ interface EnrollmentViewProps {
 }
 
 export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) => {
-  const unidades = store.getUnidades();
+  const [unidades, setUnidades] = useState<Unidade[]>(() => store.getUnidades());
+  const [matriculaConfig, setMatriculaConfig] = useState(() => store.getGlobalScreens().matricula);
 
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
-  const [ct, setCt] = useState(unidades[0]?.nome || 'Campo Grande');
+  const [ct, setCt] = useState(() => store.getUnidades()[0]?.nome || 'Campo Grande');
   const [tipoSanguineo, setTipoSanguineo] = useState('Não Sei');
   const [alergias, setAlergias] = useState('');
   const [problemasSaude, setProblemasSaude] = useState('');
   const [contatoEmergencia, setContatoEmergencia] = useState('');
   const [termoAceito, setTermoAceito] = useState(false);
+
+  useEffect(() => {
+    const unsub = store.subscribe(() => {
+      const u = store.getUnidades();
+      setUnidades([...u]);
+      setMatriculaConfig(store.getGlobalScreens().matricula);
+      if (u.length > 0 && !ct) {
+        setCt(u[0].nome);
+      }
+    });
+    return unsub;
+  }, [ct]);
 
   const [loading, setLoading] = useState(false);
   const [matriculaCriada, setMatriculaCriada] = useState<Aluno | null>(null);
@@ -170,11 +183,35 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
             <Shield className="w-6 h-6" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black uppercase text-white">
-            MATRÍCULA ONLINE <span className="text-red-500">GADITAS</span>
+            {matriculaConfig.titulo || 'MATRÍCULA ONLINE GADITAS'}
           </h1>
           <p className="text-xs text-neutral-400">
-            Cadastre-se para treinar na Equipe Gaditas. O número de matrícula sequencial é gerado automaticamente.
+            {matriculaConfig.subtitulo || 'Cadastre-se para treinar na Equipe Gaditas. O número de matrícula sequencial é gerado automaticamente.'}
           </p>
+
+          {/* Benefícios configurados no CMS */}
+          {(matriculaConfig.beneficio1 || matriculaConfig.beneficio2 || matriculaConfig.beneficio3) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 text-left">
+              {matriculaConfig.beneficio1 && (
+                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{matriculaConfig.beneficio1}</span>
+                </div>
+              )}
+              {matriculaConfig.beneficio2 && (
+                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{matriculaConfig.beneficio2}</span>
+                </div>
+              )}
+              {matriculaConfig.beneficio3 && (
+                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{matriculaConfig.beneficio3}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {erroMsg && (

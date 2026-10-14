@@ -55,6 +55,7 @@ export interface Aluno {
   peso_kg?: number;
   altura_cm?: number;
   fotoUrl?: string;
+  foto_url?: string;
   documentoUrl?: string;
   certificadoUrl?: string;
   ultimo_mes_pago: number; // 0-11, -1 se não pago
@@ -172,8 +173,11 @@ export interface HorarioTreino {
 export interface MenuItemSite {
   id: string;
   label: string;
+  titulo?: string;
   viewOuLink: string;
+  url?: string;
   visivel: boolean;
+  ativo?: boolean;
   ordem: number;
 }
 
@@ -182,8 +186,10 @@ export interface PaginaCustomizada {
   slug: string;
   titulo: string;
   conteudo: string;
-  visivelMenu: boolean;
+  visivelMenu?: boolean;
+  publicada?: boolean;
   dataCriacao: string;
+  dataAtualizacao?: string;
   autor: string;
 }
 
@@ -196,6 +202,7 @@ export interface SiteConfig {
   bannerHeroUrl?: string;
   tituloHero: string;
   subtituloHero: string;
+  descricaoHero?: string;
   chavePixOficial: string;
   valorMensalidadePadrao: number;
   whatsappContato: string;
@@ -203,6 +210,7 @@ export interface SiteConfig {
   facebookUrl?: string;
   emailContato: string;
   dominioPersonalizado?: string;
+  firebaseConfigCustom?: string;
   biografiaMestreDaniel: string;
   historiaAcademia: string;
   avisoGlobal?: string;
@@ -211,6 +219,91 @@ export interface SiteConfig {
   notificacaoTexto?: string;
   rodapeTexto?: string;
   menuItens?: MenuItemSite[];
+}
+
+export interface HomeScreenConfig {
+  badge: string;
+  tituloHero: string;
+  subtituloHero: string;
+  ctaPrimario: string;
+  ctaSecundario: string;
+  statAnosNumero: string;
+  statAnosTexto: string;
+  statFaixasNumero: string;
+  statFaixasTexto: string;
+  statPolosNumero: string;
+  statPolosTexto: string;
+  statMetodologiaNumero: string;
+  statMetodologiaTexto: string;
+  polosTitulo: string;
+  polosSubtitulo: string;
+  horariosTitulo: string;
+  horariosSubtitulo: string;
+  ctaBannerTitulo: string;
+  ctaBannerTexto: string;
+  ctaBannerBotao: string;
+}
+
+export interface SobreScreenConfig {
+  tituloMestre: string;
+  subtituloMestre: string;
+  biografiaMestre: string;
+  grauMestre: string;
+  historiaTitulo: string;
+  historiaTexto: string;
+  pilar1Titulo: string;
+  pilar1Texto: string;
+  pilar2Titulo: string;
+  pilar2Texto: string;
+  pilar3Titulo: string;
+  pilar3Texto: string;
+}
+
+export interface MatriculaScreenConfig {
+  titulo: string;
+  subtitulo: string;
+  beneficio1: string;
+  beneficio2: string;
+  beneficio3: string;
+  botaoTexto: string;
+  avisoTermo: string;
+}
+
+export interface AlunoScreenConfig {
+  tituloPortal: string;
+  avisoMural: string;
+  suporteWhatsAppTexto: string;
+  linkSuporteWhatsApp: string;
+  mostrarRanking: boolean;
+  mostrarGradeHorarios: boolean;
+  mostrarCalculadoraPeso: boolean;
+}
+
+export interface GlobalSiteConfig {
+  nomeSite: string;
+  slogan: string;
+  logoUrl?: string;
+  corPrimaria: string;
+  corDestaque: string;
+  chavePix: string;
+  valorMensalidade: number;
+  whatsapp: string;
+  instagram: string;
+  facebook?: string;
+  emailContato: string;
+  notificacaoTopoAtiva: boolean;
+  notificacaoTopoTexto: string;
+  rodapeTexto: string;
+}
+
+export interface GlobalScreensConfig {
+  home: HomeScreenConfig;
+  sobre: SobreScreenConfig;
+  matricula: MatriculaScreenConfig;
+  aluno: AlunoScreenConfig;
+  global: GlobalSiteConfig;
+  updatedAt?: any;
+  updatedBy?: string;
 }
 
 export type Professor = UsuarioSistema;

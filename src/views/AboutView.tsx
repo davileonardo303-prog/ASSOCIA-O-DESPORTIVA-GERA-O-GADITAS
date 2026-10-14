@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Shield, CheckCircle, Flame, Calendar, Users, MapPin, ChevronRight } from 'lucide-react';
 import lionEmblemImg from '../assets/images/gaditas_lion_emblem_1791983074366.jpg';
+import { store } from '../services/store';
 
 interface AboutViewProps {
   onNavigate: (view: string) => void;
 }
 
 export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
+  const [sobreConfig, setSobreConfig] = useState(() => store.getGlobalScreens().sobre);
+
+  useEffect(() => {
+    const unsub = store.subscribe(() => {
+      setSobreConfig(store.getGlobalScreens().sobre);
+    });
+    return unsub;
+  }, []);
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
       
@@ -25,31 +35,33 @@ export const AboutView: React.FC<AboutViewProps> = ({ onNavigate }) => {
                   className="w-28 h-28 object-contain mb-1 filter drop-shadow-[0_0_12px_rgba(245,158,11,0.4)]"
                 />
                 <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider">
-                  Mestre Daniel Braga
+                  {sobreConfig.tituloMestre || 'Mestre Daniel Braga'}
                 </span>
                 <span className="text-[9px] text-neutral-400 uppercase">
-                  Líder & Fundador
+                  {sobreConfig.subtituloMestre || 'Líder & Fundador'}
                 </span>
               </div>
             </div>
 
             <div className="mt-4 px-3 py-1 rounded-full bg-red-950/60 border border-red-500/40 text-[11px] font-black uppercase text-red-400">
-              Muay Thai · Grau Preta e Branca
+              {sobreConfig.grauMestre || 'Muay Thai · Grau Preta e Branca'}
             </div>
           </div>
 
           <div className="md:col-span-8 space-y-4">
             <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-amber-400">
               <Award className="w-4 h-4" />
-              <span>Direção Geral e Técnica</span>
+              <span>{sobreConfig.subtituloMestre || 'Direção Geral e Técnica'}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black uppercase text-white leading-tight">
-              MESTRE DANIEL <span className="text-red-500">BRAGA</span>
+              {sobreConfig.tituloMestre || 'MESTRE DANIEL BRAGA'}
             </h1>
 
             <p className="text-neutral-300 text-sm sm:text-base leading-relaxed">
-              Com mais de duas décadas dedicadas às artes marciais e à formação de atletas e cidadãos, o Mestre Daniel Braga lidera a <strong>Equipe Gaditas Fight Team</strong> com foco absoluto em técnica apurada, respeito à hierarquia do dojo e transformação social.
+              {sobreConfig.biografiaMestre || (
+                <>Com mais de duas décadas dedicadas às artes marciais e à formação de atletas e cidadãos, o Mestre Daniel Braga lidera a <strong>Equipe Gaditas Fight Team</strong> com foco absoluto em técnica apurada, respeito à hierarquia do dojo e transformação social.</>
+              )}
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3">

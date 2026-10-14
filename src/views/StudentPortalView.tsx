@@ -49,6 +49,16 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
   const [modalCurriculoAberto, setModalCurriculoAberto] = useState(false);
   const [modalPesoAberto, setModalPesoAberto] = useState(false);
 
+  // Configurações do CMS em tempo real
+  const [alunoConfig, setAlunoConfig] = useState(() => store.getGlobalScreens().aluno);
+
+  React.useEffect(() => {
+    const unsub = store.subscribe(() => {
+      setAlunoConfig(store.getGlobalScreens().aluno);
+    });
+    return unsub;
+  }, []);
+
   // Upload de arquivos
   const [uploadando, setUploadando] = useState(false);
   const [mensagemUpload, setMensagemUpload] = useState<{ tipo: 'sucesso' | 'erro'; texto: string } | null>(null);
@@ -243,6 +253,28 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
+      {/* Banner de Aviso do CMS para o Aluno */}
+      {alunoConfig.avisoMural && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/80 via-neutral-900 to-amber-950/40 border border-red-500/40 shadow-lg flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Bell className="w-5 h-5 text-amber-400 shrink-0 animate-bounce" />
+            <p className="text-xs text-neutral-200 font-semibold leading-relaxed">
+              {alunoConfig.avisoMural}
+            </p>
+          </div>
+          {alunoConfig.linkSuporteWhatsApp && (
+            <a
+              href={alunoConfig.linkSuporteWhatsApp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider shrink-0 transition-colors cursor-pointer"
+            >
+              {alunoConfig.suporteWhatsAppTexto || 'Suporte'}
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Barra de Topo do Aluno */}
       <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl">
         <div className="flex items-center gap-4">
