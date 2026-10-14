@@ -1,5 +1,24 @@
-import React from 'react';
-import { Shield, ArrowRight, MapPin, Award, Users, Flame, CheckCircle, ChevronRight, Instagram } from 'lucide-react';
+import React, { useState } from 'react';
+import { store } from '../services/store';
+import { HorarioTreino } from '../types';
+import { 
+  Shield, 
+  ArrowRight, 
+  MapPin, 
+  Award, 
+  Users, 
+  Flame, 
+  CheckCircle, 
+  ChevronRight, 
+  Instagram, 
+  Calendar, 
+  Clock, 
+  MessageCircle, 
+  Dumbbell, 
+  Check, 
+  Sparkles,
+  Trophy
+} from 'lucide-react';
 import heroRingImg from '../assets/images/gaditas_hero_ring_1791983055353.jpg';
 import lionEmblemImg from '../assets/images/gaditas_lion_emblem_1791983074366.jpg';
 import actionImg from '../assets/images/muay_thai_action_1791983074498.jpg';
@@ -9,6 +28,15 @@ interface HomeViewProps {
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
+  const unidades = store.getUnidades();
+  const [poloHorario, setPoloHorario] = useState<string>('Campo Grande');
+
+  const horarios = store.getHorarios(poloHorario);
+
+  const whatsappDojoUrl = `https://api.whatsapp.com/send?phone=5521999990001&text=${encodeURIComponent(
+    'Olá Mestre Daniel! Gostaria de agendar uma aula experimental gratuita na Equipe Gaditas. Como posso iniciar?'
+  )}`;
+
   return (
     <div className="space-y-24">
       
@@ -55,13 +83,15 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={() => onNavigate('sobre')}
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-neutral-900/80 hover:bg-neutral-800 text-neutral-200 hover:text-white border border-neutral-700 font-bold text-sm uppercase tracking-wider backdrop-blur-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            <a
+              href={whatsappDojoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 hover:text-emerald-200 border border-emerald-500/40 font-bold text-sm uppercase tracking-wider backdrop-blur-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Conhecer o CT & Mestre</span>
-              <ChevronRight className="w-4 h-4 text-neutral-400" />
-            </button>
+              <MessageCircle className="w-4 h-4 text-emerald-400" />
+              <span>Aula Experimental Grátis</span>
+            </a>
           </div>
 
           {/* Faixa de Números / Prova Social Adjacente */}
@@ -130,7 +160,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             <div className="pt-4">
               <button
                 onClick={() => onNavigate('sobre')}
-                className="inline-flex items-center gap-2 text-xs font-bold uppercase text-red-400 hover:text-red-300 transition-colors"
+                className="inline-flex items-center gap-2 text-xs font-bold uppercase text-red-400 hover:text-red-300 transition-colors cursor-pointer"
               >
                 <span>Conheça a história completa do Mestre Daniel</span>
                 <ArrowRight className="w-4 h-4" />
@@ -174,6 +204,100 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* SEÇÃO GRADE DE HORÁRIOS & CRONOGRAMA DE AULAS */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="p-8 sm:p-12 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <span className="text-xs uppercase font-black tracking-widest text-red-500">
+                Grade de Treinamentos
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-black uppercase text-white mt-1">
+                HORÁRIOS DAS AULAS POR POLO
+              </h2>
+              <p className="text-neutral-400 text-xs sm:text-sm mt-1">
+                Turmas matutinas, vespertinas e noturnas para todas as faixas etárias.
+              </p>
+            </div>
+
+            {/* Seletor de Polo */}
+            <div className="flex items-center gap-1.5 p-1 bg-black rounded-xl border border-neutral-800 overflow-x-auto max-w-full">
+              {unidades.map(u => (
+                <button
+                  key={u.id}
+                  onClick={() => setPoloHorario(u.nome)}
+                  className={`px-3 py-2 rounded-lg text-xs font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${
+                    poloHorario === u.nome
+                      ? 'bg-red-600 text-white shadow-md'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  {u.nome}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cards dos Horários */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {horarios.length === 0 ? (
+              <p className="col-span-full text-center text-xs text-neutral-500 py-8">
+                Consulte a secretaria para horários específicos desta unidade.
+              </p>
+            ) : (
+              horarios.map((h: HorarioTreino) => (
+                <div
+                  key={h.id}
+                  className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800/80 space-y-3 hover:border-red-500/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 text-[10px] uppercase font-bold">
+                      {h.nivel}
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-bold uppercase">
+                      CT {h.ct}
+                    </span>
+                  </div>
+
+                  <h3 className="text-base font-black uppercase text-white">
+                    {h.modalidade}
+                  </h3>
+
+                  <div className="space-y-1 text-xs text-neutral-400">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>{h.dias}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-red-500" />
+                      <span className="font-mono font-bold text-white">{h.horario}</span>
+                    </div>
+                    <div className="text-[11px] text-neutral-400 pt-1">
+                      Instrutor: <strong>{h.instrutor}</strong>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="pt-4 border-t border-neutral-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <span className="text-xs text-neutral-400">
+              Quer fazer uma aula experimental hoje mesmo? Não precisa de equipamento inicial.
+            </span>
+            <a
+              href={whatsappDojoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer shadow-md"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Chamar no WhatsApp</span>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -296,6 +420,18 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
           </div>
         </div>
       </section>
+
+      {/* BOTÃO FLUTUANTE DE WHATSAPP DO DOJO */}
+      <a
+        href={whatsappDojoUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-40 p-4 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black shadow-2xl shadow-emerald-950/80 transition-all transform hover:scale-110 flex items-center gap-2 font-black text-xs uppercase tracking-wider cursor-pointer border-2 border-white/30"
+        title="Falar no WhatsApp da Equipe Gaditas"
+      >
+        <MessageCircle className="w-6 h-6 fill-black" />
+        <span className="hidden sm:inline">WhatsApp do CT</span>
+      </a>
 
     </div>
   );

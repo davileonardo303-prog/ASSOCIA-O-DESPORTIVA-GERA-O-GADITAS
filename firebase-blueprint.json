@@ -1,0 +1,113 @@
+{
+  "entities": {
+    "Usuario": {
+      "title": "Usuario",
+      "description": "Perfil de usuário unificado no sistema Equipe Gaditas",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "nome": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["administrador_geral", "administrador", "professor", "aluno", "financeiro"] },
+        "ct": { "type": "string", "maxLength": 80 },
+        "telefone": { "type": "string", "maxLength": 30 },
+        "fotoUrl": { "type": "string" },
+        "dataCadastro": { "type": "string" }
+      },
+      "required": ["uid", "nome", "email", "role"]
+    },
+    "Aluno": {
+      "title": "Aluno",
+      "description": "Dados do guerreiro matriculado na Equipe Gaditas",
+      "type": "object",
+      "properties": {
+        "matricula": { "type": "number" },
+        "nome": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "telefone": { "type": "string", "maxLength": 30 },
+        "ct": { "type": "string", "maxLength": 80 },
+        "status": { "type": "string", "enum": ["ativo", "pendente", "inativo"] },
+        "faixa": { "type": "string", "maxLength": 50 },
+        "graus": { "type": "number" },
+        "tipoSanguineo": { "type": "string", "maxLength": 10 },
+        "alergias": { "type": "string", "maxLength": 500 },
+        "problemasSaude": { "type": "string", "maxLength": 1000 },
+        "contatoEmergencia": { "type": "string", "maxLength": 200 },
+        "pesoKg": { "type": "number" },
+        "alturaCm": { "type": "number" },
+        "ultimoMesPago": { "type": "number" },
+        "ultimoAnoPago": { "type": "number" },
+        "fotoUrl": { "type": "string" },
+        "dataCadastro": { "type": "string" }
+      },
+      "required": ["nome", "email", "ct", "status", "faixa"]
+    },
+    "FinanceiroItem": {
+      "title": "FinanceiroItem",
+      "description": "Lançamento contábil e de mensalidade da academia",
+      "type": "object",
+      "properties": {
+        "descricao": { "type": "string", "maxLength": 255 },
+        "tipo": { "type": "string", "enum": ["entrada", "saida"] },
+        "valor": { "type": "number" },
+        "categoria": { "type": "string", "maxLength": 50 },
+        "forma": { "type": "string", "maxLength": 50 },
+        "data": { "type": "string" },
+        "ct": { "type": "string", "maxLength": 80 },
+        "alunoId": { "type": "string" },
+        "comprovanteUrl": { "type": "string" }
+      },
+      "required": ["descricao", "tipo", "valor", "data", "ct"]
+    },
+    "Evento": {
+      "title": "Evento",
+      "description": "Campeonatos, exames de graduação e seminários da Equipe Gaditas",
+      "type": "object",
+      "properties": {
+        "titulo": { "type": "string", "maxLength": 150 },
+        "tipo": { "type": "string", "enum": ["campeonato", "graduacao", "seminario", "outro"] },
+        "data": { "type": "string" },
+        "local": { "type": "string", "maxLength": 200 },
+        "descricao": { "type": "string", "maxLength": 2000 },
+        "ct": { "type": "string", "maxLength": 80 },
+        "fotoUrl": { "type": "string" }
+      },
+      "required": ["titulo", "tipo", "data", "local"]
+    },
+    "AuditoriaLog": {
+      "title": "AuditoriaLog",
+      "description": "Registro de auditoria de operações críticas no sistema",
+      "type": "object",
+      "properties": {
+        "acao": { "type": "string", "maxLength": 100 },
+        "detalhes": { "type": "string", "maxLength": 2000 },
+        "usuario": { "type": "string", "maxLength": 150 },
+        "ip": { "type": "string" },
+        "data": { "type": "string" }
+      },
+      "required": ["acao", "detalhes", "data"]
+    }
+  },
+  "firestore": {
+    "/usuarios/{userId}": {
+      "schema": "Usuario",
+      "description": "Perfis e permissões dos usuários do sistema"
+    },
+    "/alunos/{alunoId}": {
+      "schema": "Aluno",
+      "description": "Fichas cadastrais, graduações e status dos atletas"
+    },
+    "/financeiro/{lancamentoId}": {
+      "schema": "FinanceiroItem",
+      "description": "Controle financeiro, pagamentos e mensalidades"
+    },
+    "/eventos/{eventoId}": {
+      "schema": "Evento",
+      "description": "Campeonatos, graduações e seminários oficiais"
+    },
+    "/auditoria/{logId}": {
+      "schema": "AuditoriaLog",
+      "description": "Logs de segurança, auditoria e alterações do banco"
+    }
+  }
+}

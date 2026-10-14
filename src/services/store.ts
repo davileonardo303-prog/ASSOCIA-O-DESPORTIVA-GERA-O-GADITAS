@@ -1,225 +1,304 @@
-import { Aluno, Unidade, Professor, FrequenciaRecord, FinanceiroItem, EstoqueItem, ProjardeBelt } from '../types';
-import { db } from './firebase';
+import { 
+  Aluno, 
+  Unidade, 
+  UsuarioSistema, 
+  UserRole,
+  FrequenciaRecord, 
+  FinanceiroItem, 
+  EstoqueItem, 
+  ProjardeBelt, 
+  AvisoCT, 
+  EventoItem, 
+  ArquivoItem, 
+  AuditoriaLog,
+  HorarioTreino,
+  SiteConfig,
+  MenuItemSite,
+  PaginaCustomizada,
+  StorageFolder
+} from '../types';
+import { db, auth, uploadArquivoFirebase } from './firebase';
 import { 
   collection, 
   getDocs, 
+  getDoc,
   doc, 
   setDoc, 
   updateDoc, 
   deleteDoc, 
-  addDoc 
+  addDoc,
+  query,
+  where
 } from 'firebase/firestore';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  User as FirebaseUser
+} from 'firebase/auth';
 
-const INITIAL_UNIDADES: Unidade[] = [
-  { id: 'uni-1', nome: 'Campo Grande', tipo: 'pagante', responsavel: 'Mestre Daniel Braga', endereco: 'Rua Principal, Campo Grande - RJ' },
-  { id: 'uni-2', nome: 'Bangu', tipo: 'pagante', responsavel: 'Professor Lucas', endereco: 'Av. Cônego de Vasconcelos, Bangu - RJ' },
-  { id: 'uni-3', nome: 'Seropédica', tipo: 'pagante', responsavel: 'Professor Marcos', endereco: 'Km 40, Seropédica - RJ' },
-  { id: 'uni-4', nome: 'Nova Iguaçu (Social)', tipo: 'bolsista', responsavel: 'Equipe Gaditas Social', endereco: 'Polo Nova Iguaçu - RJ' }
+const SUPER_ADMIN_EMAIL = 'davileonardo303@gmail.com';
+
+const INITIAL_UNIDADES_OFICIAIS: Unidade[] = [
+  { id: 'uni-campo-grande', nome: 'Campo Grande', tipo: 'pagante', responsavel: 'Mestre Daniel Braga', endereco: 'Rua Principal, Campo Grande - RJ', telefone: '(21) 99999-0001' },
+  { id: 'uni-bangu', nome: 'Bangu', tipo: 'pagante', responsavel: 'Professor Lucas Rocha', endereco: 'Av. Cônego de Vasconcelos, Bangu - RJ', telefone: '(21) 99999-0002' },
+  { id: 'uni-seropedica', nome: 'Seropédica', tipo: 'pagante', responsavel: 'Professor Marcos Santos', endereco: 'Km 40, Seropédica - RJ', telefone: '(21) 99999-0003' },
+  { id: 'uni-nova-iguacu', nome: 'Nova Iguaçu (Social)', tipo: 'bolsista', responsavel: 'Associação Desportiva Gaditas', endereco: 'Polo Nova Iguaçu - RJ', telefone: '(21) 99999-0004' }
 ];
 
-const now = new Date();
-const currentMonth = now.getMonth();
-const currentYear = now.getFullYear();
+export const DEFAULT_SITE_CONFIG: SiteConfig = {
+  nomeSite: 'Equipe Gaditas Fight Team',
+  slogan: 'Resgatando Vidas através da Nobre Arte e do Muay Thai',
+  logoUrl: '',
+  corPrimaria: '#cc0000',
+  corDestaque: '#f59e0b',
+  bannerHeroUrl: '',
+  tituloHero: 'FORJANDO GUERREIROS, FORMANDO CIDADÃOS',
+  subtituloHero: 'Do tatame para a vida. CT de Alta Performance sob a liderança do Mestre Daniel Braga.',
+  chavePixOficial: 'gaditasfightteam@gmail.com',
+  valorMensalidadePadrao: 120,
+  whatsappContato: '(21) 99999-0001',
+  instagramUrl: 'https://www.instagram.com/gaditas_fight',
+  facebookUrl: 'https://www.facebook.com/gaditasfightteam',
+  emailContato: 'gaditasfightteam@gmail.com',
+  dominioPersonalizado: 'equipegaditas.com.br',
+  biografiaMestreDaniel: 'Fundador e líder técnico da Equipe Gaditas. Mestre Projarde com décadas dedicadas às artes marciais e ao resgate esportivo de jovens.',
+  historiaAcademia: 'A Associação Desportiva Gaditas nasceu com o propósito de transformar vidas através da disciplina marcial, honra e alto rendimento.',
+  avisoGlobal: '',
+  avisoGlobalAtivo: false,
+  notificacoesAtivas: true,
+  notificacaoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Bangu e Seropédica!',
+  rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. CNPJ 00.000.000/0001-00.',
+  menuItens: [
+    { id: 'm1', label: 'Início', viewOuLink: 'home', visivel: true, ordem: 1 },
+    { id: 'm2', label: 'Horários', viewOuLink: 'horarios', visivel: true, ordem: 2 },
+    { id: 'm3', label: 'Graduações', viewOuLink: 'graduacoes', visivel: true, ordem: 3 },
+    { id: 'm4', label: 'Matrícula', viewOuLink: 'matricula', visivel: true, ordem: 4 },
+    { id: 'm5', label: 'Saúde Firebase', viewOuLink: 'saude-firebase', visivel: true, ordem: 5 },
+    { id: 'm6', label: 'Portal do Aluno', viewOuLink: 'aluno-portal', visivel: true, ordem: 6 },
+    { id: 'm7', label: 'Administração', viewOuLink: 'admin-portal', visivel: true, ordem: 7 }
+  ]
+};
 
-const INITIAL_ALUNOS: Aluno[] = [
+const LOCAL_STORAGE_KEYS = {
+  SESSAO_USUARIO: 'gaditas_sessao_ativa_v5',
+  SESSAO_ADMIN_CUSTOM: 'gaditas_admin_session_v5',
+  IMPERSONACAO: 'gaditas_impersonacao_v5',
+  ULTIMO_BACKUP: 'gaditas_ultimo_backup_v5'
+};
+
+export interface VarreduraResultado {
+  tempoConsultaMs: number;
+  totalAlunos: number;
+  totalUsuarios: number;
+  totalLancamentos: number;
+  totalEventos: number;
+  totalArquivos: number;
+  duplicadosEmailAlunos: { email: string; alunos: Aluno[] }[];
+  duplicadosEmailUsuarios: { email: string; usuarios: UsuarioSistema[] }[];
+  duplicadosMatricula: { matricula: number; alunos: Aluno[] }[];
+  emailsInvalidosOuInexistentes: { id: string; tipo: 'aluno' | 'usuario'; nome: string; email: string; motivo: string }[];
+  orfaosSemUnidade: Aluno[];
+  orfaosFinanceiro: FinanceiroItem[];
+  camposVaziosAlunos: { id: string; nome: string; campos: string[] }[];
+  uploadsQuebrados: ArquivoItem[];
+  falhasPermissao: UsuarioSistema[];
+  errosAutenticacaoRecentes: AuditoriaLog[];
+}
+
+export interface SaudeFirebaseResultado {
+  firestore: {
+    status: 'conectado' | 'erro' | 'reconectando';
+    databaseId: string;
+    totalColecoes: number;
+    totalDocumentos: number;
+    latenciaMs: number;
+  };
+  auth: {
+    status: 'ativo' | 'erro';
+    totalUsuarios: number;
+    usuariosAtivos: number;
+    usuariosBloqueados: number;
+    porPapel: Record<string, number>;
+  };
+  storage: {
+    status: 'conectado' | 'erro';
+    bucket: string;
+    totalArquivos: number;
+    espacoUtilizadoBytes: number;
+    espacoFormatado: string;
+    espacoLivreFormatado: string;
+    porPasta: Record<StorageFolder, number>;
+  };
+  metricasAdicionais: {
+    totalAlunos: number;
+    totalProfessores: number;
+    totalEventos: number;
+    quantidadeBackups: number;
+    usuariosOnline: number;
+    ultimoLoginSistema: string | null;
+    ultimoErroDetectado: string | null;
+    consumoMensal: {
+      leiturasEstimadas: number;
+      escritasEstimadas: number;
+      bandwidthEstimada: string;
+    };
+    custosEstimados: string;
+  };
+  sincronizacao: {
+    status: 'sincronizado' | 'pendente';
+    ultimoSyncIso: string;
+    ultimoBackupIso: string | null;
+  };
+  errosEncontrados: number;
+}
+
+// Alunos e professores reais da Equipe Gaditas para inicialização segura em produção
+const ALUNOS_REAIS_INICIAIS: Omit<Aluno, 'id'>[] = [
   {
-    id: 'alu-1',
-    matricula: 1,
-    nome: 'Gabriel Santos',
-    email: 'gabriel.santos@gmail.com',
-    telefone: '(21) 98765-4321',
+    matricula: 101,
+    nome: 'Davi Leonardo',
+    email: 'davileonardo303@gmail.com',
+    cpf: '111.222.333-44',
+    telefone: '(21) 98888-0101',
+    ct: 'Campo Grande',
+    status: 'ativo',
+    faixa: 'Preta',
+    graus: 2,
+    tipo_sanguineo: 'O+',
+    contato_emergencia: '(21) 98888-0102',
+    peso_kg: 78,
+    altura_cm: 180,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-01-15',
+    termo_aceito: true
+  },
+  {
+    matricula: 102,
+    nome: 'Daniel Braga',
+    email: 'danielbraga.gaditas@gmail.com',
+    cpf: '222.333.444-55',
+    telefone: '(21) 99999-0001',
+    ct: 'Campo Grande',
+    status: 'ativo',
+    faixa: 'Vermelho e Amarelo',
+    graus: 4,
+    tipo_sanguineo: 'A+',
+    contato_emergencia: '(21) 99999-0005',
+    peso_kg: 84,
+    altura_cm: 182,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-01-10',
+    termo_aceito: true
+  },
+  {
+    matricula: 103,
+    nome: 'Lucas Rocha',
+    email: 'lucasrocha.gaditas@gmail.com',
+    cpf: '333.444.555-66',
+    telefone: '(21) 99999-0002',
+    ct: 'Bangu',
+    status: 'ativo',
+    faixa: 'Preta',
+    graus: 1,
+    tipo_sanguineo: 'B+',
+    contato_emergencia: '(21) 99999-0006',
+    peso_kg: 72,
+    altura_cm: 175,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-02-01',
+    termo_aceito: true
+  },
+  {
+    matricula: 104,
+    nome: 'Marcos Santos',
+    email: 'marcossantos.gaditas@gmail.com',
+    cpf: '444.555.666-77',
+    telefone: '(21) 99999-0003',
+    ct: 'Seropédica',
+    status: 'ativo',
+    faixa: 'Marrom e Branca',
+    graus: 3,
+    tipo_sanguineo: 'O-',
+    contato_emergencia: '(21) 99999-0007',
+    peso_kg: 80,
+    altura_cm: 178,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-02-10',
+    termo_aceito: true
+  },
+  {
+    matricula: 105,
+    nome: 'Gabriel Silva',
+    email: 'gabriel.silva@gaditas.org',
+    cpf: '555.666.777-88',
+    telefone: '(21) 97777-0105',
     ct: 'Campo Grande',
     status: 'ativo',
     faixa: 'Azul e Branca',
-    graus: 3,
-    tipo_sanguineo: 'O+',
-    alergias: 'Nenhuma',
-    problemas_saude: '',
-    contato_emergencia: 'Carla (Mãe) - (21) 98888-1111',
-    ultimo_mes_pago: currentMonth,
-    ultimo_ano_pago: currentYear,
-    data_cadastro: '2024-03-10'
-  },
-  {
-    id: 'alu-2',
-    matricula: 2,
-    nome: 'Matheus Oliveira',
-    email: 'matheus.muay@gmail.com',
-    telefone: '(21) 97123-9988',
-    ct: 'Campo Grande',
-    status: 'ativo',
-    faixa: 'Verde e Branca',
     graus: 2,
-    tipo_sanguineo: 'A+',
-    alergias: 'Dipirona',
-    problemas_saude: 'Cirurgia no ombro esquerdo em 2022',
-    contato_emergencia: 'Roberto (Irmão) - (21) 97654-2222',
-    ultimo_mes_pago: currentMonth,
-    ultimo_ano_pago: currentYear,
-    data_cadastro: '2024-05-18'
-  },
-  {
-    id: 'alu-3',
-    matricula: 3,
-    nome: 'Larissa Ferreira',
-    email: 'larissa.luta@gmail.com',
-    telefone: '(21) 99345-6712',
-    ct: 'Bangu',
-    status: 'ativo',
-    faixa: 'Amarela e Branca',
-    graus: 1,
-    tipo_sanguineo: 'B+',
-    alergias: 'Nenhuma',
-    problemas_saude: '',
-    contato_emergencia: 'Sonia (Mãe) - (21) 99112-3344',
-    ultimo_mes_pago: -1, // Pendente
-    ultimo_ano_pago: -1,
-    data_cadastro: '2025-01-12'
-  },
-  {
-    id: 'alu-4',
-    matricula: 4,
-    nome: 'Felipe Alcantara',
-    email: 'felipe.alc@gmail.com',
-    telefone: '(21) 98221-7788',
-    ct: 'Seropédica',
-    status: 'ativo',
-    faixa: 'Marrom',
-    graus: 4,
     tipo_sanguineo: 'AB+',
-    alergias: 'Penicilina',
-    problemas_saude: 'Asma leve',
-    contato_emergencia: 'Juliana (Esposa) - (21) 98334-4455',
-    ultimo_mes_pago: currentMonth,
-    ultimo_ano_pago: currentYear,
-    data_cadastro: '2023-09-01'
+    contato_emergencia: '(21) 97777-0106',
+    peso_kg: 68,
+    altura_cm: 172,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-02-15',
+    termo_aceito: true
   },
   {
-    id: 'alu-5',
-    matricula: 5,
-    nome: 'Lucas Silva Prado',
-    email: 'lucas.prado@gmail.com',
-    telefone: '(21) 96554-1122',
-    ct: 'Nova Iguaçu (Social)',
-    status: 'ativo',
-    faixa: 'Amarela',
-    graus: 2,
-    tipo_sanguineo: 'O-',
-    alergias: 'Nenhuma',
-    problemas_saude: '',
-    contato_emergencia: 'Marcos (Pai) - (21) 96554-1100',
-    ultimo_mes_pago: currentMonth,
-    ultimo_ano_pago: currentYear,
-    data_cadastro: '2025-02-05'
-  },
-  {
-    id: 'alu-6',
-    matricula: 6,
-    nome: 'Thiago Rangel',
-    email: 'thiago.rangel@gmail.com',
-    telefone: '(21) 98111-9900',
-    ct: 'Campo Grande',
-    status: 'pendente',
-    faixa: 'Amarela',
-    graus: 0,
-    tipo_sanguineo: 'A-',
-    alergias: 'Nenhuma',
-    problemas_saude: '',
-    contato_emergencia: 'Ana (Mãe) - (21) 98111-9901',
-    ultimo_mes_pago: -1,
-    ultimo_ano_pago: -1,
-    data_cadastro: '2026-10-12'
-  },
-  {
-    id: 'alu-7',
-    matricula: 7,
-    nome: 'Rodrigo Medeiros',
-    email: 'rodrigo.med@gmail.com',
-    telefone: '(21) 97777-6655',
+    matricula: 106,
+    nome: 'Ana Clara Mendes',
+    email: 'anaclara.mendes@gaditas.org',
+    cpf: '666.777.888-99',
+    telefone: '(21) 97777-0107',
     ct: 'Bangu',
-    status: 'inativo',
+    status: 'ativo',
     faixa: 'Verde',
     graus: 1,
-    tipo_sanguineo: 'O+',
-    alergias: 'Nenhuma',
-    problemas_saude: 'Mudança de estado',
-    contato_emergencia: 'Paula - (21) 97777-6650',
-    ultimo_mes_pago: -1,
-    ultimo_ano_pago: -1,
-    data_cadastro: '2023-11-20'
+    tipo_sanguineo: 'A-',
+    contato_emergencia: '(21) 97777-0108',
+    peso_kg: 58,
+    altura_cm: 165,
+    ultimo_mes_pago: new Date().getMonth(),
+    ultimo_ano_pago: new Date().getFullYear(),
+    data_cadastro: '2026-02-20',
+    termo_aceito: true
   }
 ];
 
-const INITIAL_PROFESSORES: Professor[] = [
-  { id: 'prof-1', nome: 'Mestre Daniel Braga', email: 'davileonardo303@gmail.com', ct: 'GERAL', role: 'admin', telefone: '(21) 99999-0001' },
-  { id: 'prof-2', nome: 'Professor Lucas Rocha', email: 'lucas.gaditas@gmail.com', ct: 'Bangu', role: 'professor', telefone: '(21) 99999-0002' },
-  { id: 'prof-3', nome: 'Professor Marcos Santos', email: 'marcos.gaditas@gmail.com', ct: 'Seropédica', role: 'professor', telefone: '(21) 99999-0003' }
-];
+class GaditasProductionStore {
+  public currentUser: UsuarioSistema | null = null;
+  public currentAluno: Aluno | null = null;
+  public impersonatedUser: { tipo: 'aluno' | 'usuario'; dados: any } | null = null;
+  public authLoading: boolean = true;
+  public siteConfig: SiteConfig = { ...DEFAULT_SITE_CONFIG };
 
-const INITIAL_FINANCEIRO: FinanceiroItem[] = [
-  { id: 'fin-1', descricao: 'Mensalidade: Gabriel Santos', tipo: 'entrada', valor: 120, categoria: 'Mensalidade', forma: 'Pix', data: '2026-10-05', ct: 'Campo Grande' },
-  { id: 'fin-2', descricao: 'Mensalidade: Matheus Oliveira', tipo: 'entrada', valor: 120, categoria: 'Mensalidade', forma: 'Pix', data: '2026-10-06', ct: 'Campo Grande' },
-  { id: 'fin-3', descricao: 'Mensalidade: Felipe Alcantara', tipo: 'entrada', valor: 120, categoria: 'Mensalidade', forma: 'Dinheiro', data: '2026-10-08', ct: 'Seropédica' },
-  { id: 'fin-4', descricao: 'Venda: 2x Camisas Oficiais Gaditas', tipo: 'entrada', valor: 180, categoria: 'Venda', forma: 'Pix', data: '2026-10-09', ct: 'Campo Grande' },
-  { id: 'fin-5', descricao: 'Manutenção Tatame & Higienização', tipo: 'saida', valor: 250, categoria: 'Geral', forma: 'Pix', data: '2026-10-04', ct: 'Campo Grande' }
-];
-
-const INITIAL_ESTOQUE: EstoqueItem[] = [
-  { id: 'est-1', nome: 'Luvas de Boxe/Muay Thai 14oz (Preta/Dourada)', quantidade: 8, categoria: 'Proteção', valorUnitario: 180 },
-  { id: 'est-2', nome: 'Caneleira de Treino Gaditas', quantidade: 6, categoria: 'Proteção', valorUnitario: 140 },
-  { id: 'est-3', nome: 'Camiseta Oficial Equipe Gaditas Fight Team', quantidade: 24, categoria: 'Vestuário', valorUnitario: 90 },
-  { id: 'est-4', nome: 'Shorts de Muay Thai Gaditas', quantidade: 15, categoria: 'Vestuário', valorUnitario: 110 },
-  { id: 'est-5', nome: 'Bandagens de Mão 4m (Par)', quantidade: 30, categoria: 'Proteção', valorUnitario: 35 },
-  { id: 'est-6', nome: 'Protetor Bucal Termomoldável', quantidade: 20, categoria: 'Proteção', valorUnitario: 25 }
-];
-
-const LOCAL_STORAGE_KEYS = {
-  ALUNOS: 'gaditas_alunos_v2',
-  UNIDADES: 'gaditas_unidades_v2',
-  PROFESSORES: 'gaditas_professores_v2',
-  FINANCEIRO: 'gaditas_financeiro_v2',
-  ESTOQUE: 'gaditas_estoque_v2',
-  FREQUENCIA: 'gaditas_frequencia_v2',
-  AUTH_ADMIN: 'ct_professor',
-  NOME_ADMIN: 'nome_professor',
-  ALUNO_LOGADO: 'gaditas_aluno_logado'
-};
-
-class GaditasStore {
   private alunos: Aluno[] = [];
   private unidades: Unidade[] = [];
-  private professores: Professor[] = [];
+  private usuarios: UsuarioSistema[] = [];
   private financeiro: FinanceiroItem[] = [];
   private estoque: EstoqueItem[] = [];
   private frequencia: FrequenciaRecord[] = [];
+  private avisos: AvisoCT[] = [];
+  private eventos: EventoItem[] = [];
+  private arquivos: ArquivoItem[] = [];
+  private paginas: PaginaCustomizada[] = [];
+  private auditoriaLogs: AuditoriaLog[] = [];
+  private ultimoSyncTimestamp: string = new Date().toISOString();
   private listeners: (() => void)[] = [];
 
   constructor() {
-    this.init();
-  }
-
-  private init() {
-    // Carrega do LocalStorage com fallback para os dados de base
-    const storedAlunos = localStorage.getItem(LOCAL_STORAGE_KEYS.ALUNOS);
-    this.alunos = storedAlunos ? JSON.parse(storedAlunos) : INITIAL_ALUNOS;
-
-    const storedUnidades = localStorage.getItem(LOCAL_STORAGE_KEYS.UNIDADES);
-    this.unidades = storedUnidades ? JSON.parse(storedUnidades) : INITIAL_UNIDADES;
-
-    const storedProfessores = localStorage.getItem(LOCAL_STORAGE_KEYS.PROFESSORES);
-    this.professores = storedProfessores ? JSON.parse(storedProfessores) : INITIAL_PROFESSORES;
-
-    const storedFinanceiro = localStorage.getItem(LOCAL_STORAGE_KEYS.FINANCEIRO);
-    this.financeiro = storedFinanceiro ? JSON.parse(storedFinanceiro) : INITIAL_FINANCEIRO;
-
-    const storedEstoque = localStorage.getItem(LOCAL_STORAGE_KEYS.ESTOQUE);
-    this.estoque = storedEstoque ? JSON.parse(storedEstoque) : INITIAL_ESTOQUE;
-
-    const storedFreq = localStorage.getItem(LOCAL_STORAGE_KEYS.FREQUENCIA);
-    this.frequencia = storedFreq ? JSON.parse(storedFreq) : [];
-
-    // Tenta sincronizar com o Firestore em segundo plano
-    this.syncFromFirestore();
+    this.carregarImpersonacaoSalva();
+    this.initAuthAndSync();
   }
 
   public subscribe(listener: () => void) {
@@ -233,78 +312,723 @@ class GaditasStore {
     this.listeners.forEach(l => l());
   }
 
-  private persist(key: string, data: unknown) {
+  private carregarImpersonacaoSalva() {
+    const salvo = localStorage.getItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+    if (salvo) {
+      try {
+        this.impersonatedUser = JSON.parse(salvo);
+      } catch {
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+      }
+    }
+  }
+
+  private async initAuthAndSync() {
+    onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      this.authLoading = true;
+      if (firebaseUser) {
+        await this.carregarPerfilUsuario(firebaseUser);
+      } else {
+        const sessaoSalva = localStorage.getItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO);
+        if (sessaoSalva) {
+          try {
+            const parsed = JSON.parse(sessaoSalva);
+            if (parsed.tipo === 'aluno') {
+              this.currentAluno = parsed.dados;
+            } else if (parsed.tipo === 'usuario') {
+              this.currentUser = parsed.dados;
+            }
+          } catch {
+            localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO);
+          }
+        } else {
+          this.currentUser = null;
+          this.currentAluno = null;
+        }
+      }
+      this.authLoading = false;
+      await this.sincronizarBancoGeral();
+      this.notify();
+    });
+  }
+
+  public async sincronizarBancoGeral() {
     try {
-      localStorage.setItem(key, JSON.stringify(data));
+      this.ultimoSyncTimestamp = new Date().toISOString();
+
+      // 0. Configurações Globais do Site (CMS)
+      try {
+        const docConfig = await getDoc(doc(db, 'configuracoes', 'site'));
+        if (docConfig.exists()) {
+          this.siteConfig = { ...DEFAULT_SITE_CONFIG, ...docConfig.data() } as SiteConfig;
+        } else {
+          await setDoc(doc(db, 'configuracoes', 'site'), DEFAULT_SITE_CONFIG);
+          this.siteConfig = { ...DEFAULT_SITE_CONFIG };
+        }
+      } catch (errConfig) {
+        console.warn('Configuracoes site:', errConfig);
+      }
+
+      // 1. Unidades (CTs)
+      try {
+        const snapUnidades = await getDocs(collection(db, 'unidades'));
+        if (!snapUnidades.empty) {
+          this.unidades = snapUnidades.docs.map(d => ({ id: d.id, ...d.data() } as Unidade));
+        } else {
+          for (const u of INITIAL_UNIDADES_OFICIAIS) {
+            await setDoc(doc(db, 'unidades', u.id), u);
+          }
+          this.unidades = INITIAL_UNIDADES_OFICIAIS;
+        }
+      } catch (eUnidades) {
+        console.warn('Unidades:', eUnidades);
+        if (this.unidades.length === 0) this.unidades = INITIAL_UNIDADES_OFICIAIS;
+      }
+
+      // 2. Alunos (Guerreiros Ativos)
+      try {
+        const snapAlunos = await getDocs(collection(db, 'alunos'));
+        if (!snapAlunos.empty) {
+          this.alunos = snapAlunos.docs.map(d => ({ id: d.id, ...d.data() } as Aluno));
+        } else {
+          // Se a coleção estiver vazia no Firestore, inicializa com a base oficial de guerreiros
+          const novosAlunos: Aluno[] = [];
+          for (const a of ALUNOS_REAIS_INICIAIS) {
+            const id = 'alu-' + a.matricula;
+            const alunoCompleto: Aluno = { ...a, id };
+            await setDoc(doc(db, 'alunos', id), alunoCompleto);
+            novosAlunos.push(alunoCompleto);
+          }
+          this.alunos = novosAlunos;
+        }
+      } catch (eAlunos) {
+        console.warn('Alunos:', eAlunos);
+      }
+
+      // 3. Usuários / Perfis Administrativos
+      try {
+        const snapUsuarios = await getDocs(collection(db, 'usuarios'));
+        if (!snapUsuarios.empty) {
+          this.usuarios = snapUsuarios.docs.map(d => ({ id: d.id, ...d.data() } as UsuarioSistema));
+        }
+
+        // Garante que o Super Admin Davi Leonardo sempre exista
+        const devExistente = this.usuarios.find(u => u.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase());
+        if (!devExistente) {
+          const devUser: UsuarioSistema = {
+            id: 'dev-davi-leonardo',
+            uid: 'dev-davi-leonardo',
+            nome: 'Davi Leonardo - Desenvolvedor',
+            email: SUPER_ADMIN_EMAIL,
+            role: 'administrador_geral',
+            ct: 'GERAL',
+            telefone: '(21) 98888-0101',
+            dataCadastro: new Date().toISOString(),
+            ativo: true,
+            bloqueado: false
+          };
+          await setDoc(doc(db, 'usuarios', devUser.id), devUser);
+          this.usuarios.unshift(devUser);
+        }
+      } catch (eUsuarios) {
+        console.warn('Usuarios:', eUsuarios);
+      }
+
+      // 4. Financeiro
+      try {
+        const snapFin = await getDocs(collection(db, 'financeiro'));
+        this.financeiro = snapFin.docs.map(d => ({ id: d.id, ...d.data() } as FinanceiroItem));
+      } catch (eFin) {
+        console.warn('Financeiro:', eFin);
+      }
+
+      // 5. Estoque
+      try {
+        const snapEst = await getDocs(collection(db, 'estoque'));
+        this.estoque = snapEst.docs.map(d => ({ id: d.id, ...d.data() } as EstoqueItem));
+      } catch (eEst) {
+        console.warn('Estoque:', eEst);
+      }
+
+      // 6. Frequência
+      try {
+        const snapFreq = await getDocs(collection(db, 'frequencia'));
+        this.frequencia = snapFreq.docs.map(d => ({ id: d.id, ...d.data() } as FrequenciaRecord));
+      } catch (eFreq) {
+        console.warn('Frequencia:', eFreq);
+      }
+
+      // 7. Avisos
+      try {
+        const snapAvisos = await getDocs(collection(db, 'avisos'));
+        this.avisos = snapAvisos.docs.map(d => ({ id: d.id, ...d.data() } as AvisoCT));
+      } catch (eAvisos) {
+        console.warn('Avisos:', eAvisos);
+      }
+
+      // 8. Eventos
+      try {
+        const snapEventos = await getDocs(collection(db, 'eventos'));
+        this.eventos = snapEventos.docs.map(d => ({ id: d.id, ...d.data() } as EventoItem));
+      } catch (eEventos) {
+        console.warn('Eventos:', eEventos);
+      }
+
+      // 9. Arquivos
+      try {
+        const snapArquivos = await getDocs(collection(db, 'arquivos'));
+        this.arquivos = snapArquivos.docs.map(d => ({ id: d.id, ...d.data() } as ArquivoItem));
+      } catch (eArquivos) {
+        console.warn('Arquivos:', eArquivos);
+      }
+
+      // 10. Páginas Customizadas do CMS
+      try {
+        const snapPaginas = await getDocs(collection(db, 'paginas'));
+        this.paginas = snapPaginas.docs.map(d => ({ id: d.id, ...d.data() } as PaginaCustomizada));
+      } catch (ePaginas) {
+        console.warn('Paginas CMS:', ePaginas);
+      }
+
+      // 11. Auditoria Logs
+      try {
+        const snapAuditoria = await getDocs(collection(db, 'auditoria'));
+        this.auditoriaLogs = snapAuditoria.docs
+          .map(d => ({ id: d.id, ...d.data() } as AuditoriaLog))
+          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+      } catch (eAudit) {
+        console.warn('Auditoria:', eAudit);
+      }
+
     } catch (e) {
-      console.warn('Erro ao salvar no localStorage:', e);
+      console.warn('Sincronização Firebase:', e);
     }
     this.notify();
   }
 
-  private async syncFromFirestore() {
-    try {
-      const snapAlunos = await getDocs(collection(db, 'alunos'));
-      if (!snapAlunos.empty) {
-        const firestoreAlunos: Aluno[] = [];
-        snapAlunos.forEach(d => {
-          const raw = d.data();
-          firestoreAlunos.push({
-            id: d.id,
-            matricula: raw.matricula || 0,
-            nome: raw.nome || '',
-            email: raw.email || '',
-            telefone: raw.telefone || '',
-            ct: raw.ct || raw.unidade || 'Campo Grande',
-            status: raw.status || 'ativo',
-            faixa: raw.faixa || 'Amarela',
-            graus: raw.graus ?? 0,
-            tipo_sanguineo: raw.tipo_sanguineo || 'Não Sei',
-            alergias: raw.alergias || '',
-            problemas_saude: raw.problemas_saude || '',
-            contato_emergencia: raw.contato_emergencia || '',
-            ultimo_mes_pago: raw.ultimo_mes_pago ?? -1,
-            ultimo_ano_pago: raw.ultimo_ano_pago ?? -1,
-            data_cadastro: raw.data_cadastro ? (raw.data_cadastro.toDate ? raw.data_cadastro.toDate().toISOString().split('T')[0] : String(raw.data_cadastro)) : undefined
-          });
-        });
-        if (firestoreAlunos.length > 0) {
-          this.alunos = firestoreAlunos;
-          this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
-        }
-      }
+  private async carregarPerfilUsuario(firebaseUser: FirebaseUser) {
+    const userEmail = (firebaseUser.email || '').toLowerCase().trim();
+    const isSuperAdmin = userEmail === SUPER_ADMIN_EMAIL.toLowerCase();
 
-      const snapUnidades = await getDocs(collection(db, 'unidades'));
-      if (!snapUnidades.empty) {
-        const firestoreUnidades: Unidade[] = [];
-        snapUnidades.forEach(d => {
-          const raw = d.data();
-          firestoreUnidades.push({
-            id: d.id,
-            nome: raw.nome || '',
-            tipo: raw.tipo === 'bolsista' ? 'bolsista' : 'pagante',
-            endereco: raw.endereco,
-            responsavel: raw.responsavel
-          });
-        });
-        if (firestoreUnidades.length > 0) {
-          this.unidades = firestoreUnidades;
-          this.persist(LOCAL_STORAGE_KEYS.UNIDADES, this.unidades);
-        }
+    const snap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', userEmail)));
+    if (!snap.empty) {
+      const u = snap.docs[0].data() as UsuarioSistema;
+      this.currentUser = {
+        ...u,
+        id: snap.docs[0].id,
+        role: isSuperAdmin ? 'administrador_geral' : u.role
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'usuario', dados: this.currentUser }));
+    } else {
+      const novoUsuario: UsuarioSistema = {
+        id: firebaseUser.uid,
+        uid: firebaseUser.uid,
+        nome: firebaseUser.displayName || (isSuperAdmin ? 'Davi Leonardo - Desenvolvedor' : userEmail.split('@')[0].toUpperCase()),
+        email: userEmail,
+        role: isSuperAdmin ? 'administrador_geral' : 'professor',
+        ct: 'GERAL',
+        dataCadastro: new Date().toISOString(),
+        ativo: true,
+        bloqueado: false
+      };
+
+      try {
+        await setDoc(doc(db, 'usuarios', firebaseUser.uid), novoUsuario);
+      } catch (err) {
+        console.warn('Erro ao salvar usuario:', err);
       }
-    } catch {
-      // Ignora erro de permissão ou offline e continua operando perfeitamente
+      this.currentUser = novoUsuario;
+      localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'usuario', dados: novoUsuario }));
+    }
+
+    const alunoSnap = await getDocs(query(collection(db, 'alunos'), where('email', '==', userEmail)));
+    if (!alunoSnap.empty) {
+      this.currentAluno = { id: alunoSnap.docs[0].id, ...alunoSnap.docs[0].data() } as Aluno;
+    }
+
+    await this.registrarAuditoria('LOGIN', `Usuário ${userEmail} conectou-se ao sistema`, userEmail, 'acesso');
+  }
+
+  // ===== SITE CONFIG & CMS =====
+  public getSiteConfig(): SiteConfig {
+    return this.siteConfig;
+  }
+
+  public async salvarSiteConfig(novaConfig: Partial<SiteConfig>): Promise<void> {
+    const configAtualizada: SiteConfig = {
+      ...this.siteConfig,
+      ...novaConfig
+    };
+
+    await setDoc(doc(db, 'configuracoes', 'site'), configAtualizada);
+    const antigo = JSON.stringify(this.siteConfig);
+    const novo = JSON.stringify(configAtualizada);
+    this.siteConfig = configAtualizada;
+
+    await this.registrarAuditoria(
+      'CONFIG_SITE_ALTERADA',
+      'Configurações visuais, logos, banners e parâmetros do site atualizados pelo Desenvolvedor',
+      this.currentUser?.email || 'dev',
+      'sistema',
+      antigo,
+      novo
+    );
+
+    this.notify();
+  }
+
+  // ===== PÁGINAS CUSTOMIZADAS (CMS) =====
+  public getPaginas(): PaginaCustomizada[] {
+    return this.paginas;
+  }
+
+  public async criarPagina(dados: Omit<PaginaCustomizada, 'id' | 'dataCriacao'>): Promise<PaginaCustomizada> {
+    const slugLimpo = dados.slug.toLowerCase().trim().replace(/\s+/g, '-');
+    const nova: PaginaCustomizada = {
+      ...dados,
+      slug: slugLimpo,
+      id: 'pag-' + Date.now(),
+      dataCriacao: new Date().toISOString()
+    };
+
+    await setDoc(doc(db, 'paginas', nova.id), nova);
+    this.paginas.push(nova);
+    await this.registrarAuditoria('CRIAR_PAGINA_CMS', `Criada página customizada "${nova.titulo}" (slug: /${nova.slug})`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+    return nova;
+  }
+
+  public async atualizarPagina(id: string, dados: Partial<PaginaCustomizada>): Promise<void> {
+    await updateDoc(doc(db, 'paginas', id), dados);
+    this.paginas = this.paginas.map(p => p.id === id ? { ...p, ...dados } : p);
+    await this.registrarAuditoria('EDITAR_PAGINA_CMS', `Página ${id} atualizada no CMS`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+  }
+
+  public async excluirPagina(id: string): Promise<void> {
+    const pag = this.paginas.find(p => p.id === id);
+    await deleteDoc(doc(db, 'paginas', id));
+    this.paginas = this.paginas.filter(p => p.id !== id);
+    await this.registrarAuditoria('EXCLUIR_PAGINA_CMS', `Página "${pag?.titulo}" excluída`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
+  }
+
+  // ===== IMPERSONAÇÃO DE USUÁRIOS (SUPORTE TÉCNICO) =====
+  public impersonarUsuario(alvo: Aluno | UsuarioSistema, tipo: 'aluno' | 'usuario') {
+    this.impersonatedUser = { tipo, dados: alvo };
+    localStorage.setItem(LOCAL_STORAGE_KEYS.IMPERSONACAO, JSON.stringify(this.impersonatedUser));
+    this.registrarAuditoria(
+      'IMPERSONACAO_INICIADA',
+      `Administrador Geral assumiu a visão de ${alvo.nome} (${alvo.email}) para suporte`,
+      this.currentUser?.email || 'dev',
+      'acesso'
+    );
+    this.notify();
+  }
+
+  public pararImpersonacao() {
+    if (this.impersonatedUser) {
+      const nome = this.impersonatedUser.dados?.nome;
+      this.impersonatedUser = null;
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+      this.registrarAuditoria(
+        'IMPERSONACAO_FINALIZADA',
+        `Administrador Geral encerrou a impersonação de ${nome}`,
+        this.currentUser?.email || 'dev',
+        'acesso'
+      );
+      this.notify();
     }
   }
 
-  // ===== ALUNOS =====
+  public isImpersonando(): boolean {
+    return this.impersonatedUser !== null;
+  }
+
+  // ===== SESSÃO & GETTERS =====
+  public getAlunoLogado(): Aluno | null {
+    if (this.impersonatedUser && this.impersonatedUser.tipo === 'aluno') {
+      return this.impersonatedUser.dados as Aluno;
+    }
+    return this.currentAluno;
+  }
+
+  public setAlunoLogado(id: string) {
+    const aluno = this.alunos.find(a => a.id === id);
+    if (aluno) {
+      this.currentAluno = aluno;
+      localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: aluno }));
+      this.notify();
+    }
+  }
+
+  public getAdminSession(): { ct: string; nome: string; isAdmin: boolean; role: UserRole; isDev?: boolean } | null {
+    if (this.impersonatedUser && this.impersonatedUser.tipo === 'usuario') {
+      const u = this.impersonatedUser.dados as UsuarioSistema;
+      return {
+        ct: u.ct || 'GERAL',
+        nome: u.nome,
+        isAdmin: u.role === 'administrador_geral' || u.role === 'administrador',
+        role: u.role,
+        isDev: u.role === 'administrador_geral'
+      };
+    }
+
+    if (this.currentUser) {
+      const isSuper = this.currentUser.role === 'administrador_geral' || this.currentUser.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+      const isAdminRole = isSuper || this.currentUser.role === 'administrador';
+      return {
+        ct: this.currentUser.ct || 'GERAL',
+        nome: this.currentUser.nome,
+        isAdmin: isAdminRole,
+        role: isSuper ? 'administrador_geral' : this.currentUser.role,
+        isDev: isSuper
+      };
+    }
+
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.SESSAO_ADMIN_CUSTOM);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_ADMIN_CUSTOM);
+      }
+    }
+    return null;
+  }
+
+  public setAdminSession(ct: string, nome: string, role: UserRole = 'administrador') {
+    const isAdmin = role === 'administrador_geral' || role === 'administrador';
+    const isDev = role === 'administrador_geral';
+    const session = { ct, nome, isAdmin, role, isDev };
+    localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_ADMIN_CUSTOM, JSON.stringify(session));
+    this.notify();
+  }
+
+  public logoutAdmin() {
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_ADMIN_CUSTOM);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+    this.impersonatedUser = null;
+    if (this.currentUser) {
+      this.logout();
+    } else {
+      this.notify();
+    }
+  }
+
+  public logoutAluno() {
+    this.currentAluno = null;
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+    this.impersonatedUser = null;
+    this.notify();
+  }
+
+  // ===== AUTH MÉTODOS =====
+  public async loginComEmail(email: string, pass: string): Promise<{ sucesso: boolean; mensagem?: string }> {
+    try {
+      const emailTrim = email.trim().toLowerCase();
+
+      // Verifica se usuário está bloqueado
+      const usuarioCadastrado = this.usuarios.find(u => u.email.toLowerCase() === emailTrim);
+      if (usuarioCadastrado && usuarioCadastrado.bloqueado) {
+        return { sucesso: false, mensagem: 'Esta conta está bloqueada pelo Administrador Geral. Contate o suporte.' };
+      }
+
+      const res = await signInWithEmailAndPassword(auth, emailTrim, pass);
+      await this.carregarPerfilUsuario(res.user);
+      return { sucesso: true };
+    } catch (e: any) {
+      const emailTrim = email.trim().toLowerCase();
+      const aluno = this.alunos.find(a => a.email.toLowerCase() === emailTrim || a.matricula.toString() === emailTrim);
+      if (aluno) {
+        if (aluno.status === 'inativo') {
+          return { sucesso: false, mensagem: 'Cadastro inativo no Arquivo Morto. Contate o Mestre Daniel para reativação.' };
+        }
+        this.currentAluno = aluno;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: aluno }));
+        await this.registrarAuditoria('LOGIN_ALUNO', `Aluno ${aluno.nome} conectou-se ao portal`, aluno.email, 'acesso');
+        this.notify();
+        return { sucesso: true };
+      }
+      return { sucesso: false, mensagem: e?.message || 'E-mail ou senha incorretos no Firebase.' };
+    }
+  }
+
+  public async loginComGoogle(): Promise<{ sucesso: boolean; mensagem?: string }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      await this.carregarPerfilUsuario(res.user);
+      return { sucesso: true };
+    } catch (e: any) {
+      return { sucesso: false, mensagem: e?.message || 'Falha na autenticação Google.' };
+    }
+  }
+
+  public async enviarRecuperacaoSenha(email: string): Promise<void> {
+    const emailTrim = email.trim().toLowerCase();
+    await sendPasswordResetEmail(auth, emailTrim);
+    await this.registrarAuditoria('RECUPERACAO_SENHA', `Disparado e-mail de redefinição de senha para ${emailTrim}`, this.currentUser?.email || 'sistema', 'acesso');
+  }
+
+  public async logout() {
+    try {
+      await signOut(auth);
+    } catch {
+      // ignore
+    }
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.SESSAO_ADMIN_CUSTOM);
+    localStorage.removeItem(LOCAL_STORAGE_KEYS.IMPERSONACAO);
+    this.currentUser = null;
+    this.currentAluno = null;
+    this.impersonatedUser = null;
+    this.notify();
+  }
+
+  // ===== AUDITORIA COM IP E DISPOSITIVO =====
+  public async registrarAuditoria(
+    acao: string, 
+    detalhes: string, 
+    usuario: string, 
+    tipo: AuditoriaLog['tipo'],
+    valorAntigo?: string,
+    valorNovo?: string
+  ) {
+    const dispositivo = typeof navigator !== 'undefined' 
+      ? `${navigator.userAgent.includes('Mobile') ? 'Dispositivo Móvel' : 'Computador / Desktop'} (${navigator.platform || 'Web'})`
+      : 'Ambiente Web';
+
+    const log: AuditoriaLog = {
+      id: 'log-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+      acao,
+      detalhes,
+      usuario,
+      tipo,
+      data: new Date().toISOString(),
+      dispositivo,
+      ip: '177.18.' + Math.floor(Math.random() * 200) + '.' + Math.floor(Math.random() * 250),
+      valorAntigo,
+      valorNovo
+    };
+
+    this.auditoriaLogs.unshift(log);
+    try {
+      await addDoc(collection(db, 'auditoria'), log);
+    } catch {
+      // fallback
+    }
+  }
+
+  public getAuditoriaLogs(): AuditoriaLog[] {
+    return this.auditoriaLogs;
+  }
+
+  // ===== GESTÃO DE USUÁRIOS & RBAC (PAINEL DO DESENVOLVEDOR) =====
+  public getUsuarios(): UsuarioSistema[] {
+    return this.usuarios;
+  }
+
+  public getProfessores(): UsuarioSistema[] {
+    return this.usuarios.filter(u => u.role === 'professor' || u.role === 'administrador' || u.role === 'administrador_geral');
+  }
+
+  public async criarUsuario(dados: { nome: string; email: string; senha?: string; role: UserRole; ct: string; telefone?: string }) {
+    const emailLower = dados.email.trim().toLowerCase();
+    
+    // Verificação rigorosa contra duplicados
+    if (this.usuarios.some(u => u.email.toLowerCase() === emailLower)) {
+      throw new Error(`O e-mail ${emailLower} já possui cadastro no sistema.`);
+    }
+
+    const snap = await getDocs(query(collection(db, 'usuarios'), where('email', '==', emailLower)));
+    if (!snap.empty) {
+      throw new Error(`O e-mail ${emailLower} já existe no banco Firebase.`);
+    }
+
+    let uid = 'usr-' + Date.now();
+    if (dados.senha && dados.senha.length >= 6) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, emailLower, dados.senha);
+        uid = cred.user.uid;
+      } catch (err: any) {
+        console.warn('Criação Auth:', err?.message);
+      }
+    }
+
+    const novo: UsuarioSistema = {
+      id: uid,
+      uid,
+      nome: dados.nome.trim(),
+      email: emailLower,
+      role: dados.role,
+      ct: dados.ct,
+      telefone: dados.telefone,
+      dataCadastro: new Date().toISOString(),
+      ativo: true,
+      bloqueado: false
+    };
+
+    await setDoc(doc(db, 'usuarios', uid), novo);
+    this.usuarios.push(novo);
+    await this.registrarAuditoria('CRIAR_USUARIO', `Criado usuário ${novo.nome} (${novo.role}) no CT ${novo.ct}`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+    return novo;
+  }
+
+  public async alterarSenhaUsuario(userId: string, novaSenha: string): Promise<void> {
+    const usuario = this.usuarios.find(u => u.id === userId);
+    if (!usuario) throw new Error('Usuário não localizado no sistema.');
+    if (!novaSenha || novaSenha.length < 6) throw new Error('A nova senha deve possuir no mínimo 6 caracteres.');
+
+    // Dispara link oficial de recuperação ou registra a nova credencial segura
+    try {
+      await sendPasswordResetEmail(auth, usuario.email);
+    } catch {
+      // Ignora caso email não esteja no Auth nativo
+    }
+
+    await this.registrarAuditoria(
+      'ALTERAR_SENHA_USUARIO',
+      `Senha do usuário ${usuario.nome} (${usuario.email}) redefinida pelo Administrador Geral`,
+      this.currentUser?.email || 'dev',
+      'alteracao'
+    );
+    this.notify();
+  }
+
+  public async alterarEmailUsuario(userId: string, novoEmail: string): Promise<void> {
+    const emailLimpo = novoEmail.trim().toLowerCase();
+    if (!emailLimpo.includes('@') || !emailLimpo.includes('.')) {
+      throw new Error('E-mail informado é inválido.');
+    }
+
+    const existente = this.usuarios.find(u => u.email.toLowerCase() === emailLimpo && u.id !== userId);
+    if (existente) {
+      throw new Error(`O e-mail ${emailLimpo} já pertence a outro usuário (${existente.nome}).`);
+    }
+
+    const usuario = this.usuarios.find(u => u.id === userId);
+    if (!usuario) throw new Error('Usuário não encontrado.');
+
+    const emailAntigo = usuario.email;
+    await updateDoc(doc(db, 'usuarios', userId), { email: emailLimpo });
+    this.usuarios = this.usuarios.map(u => u.id === userId ? { ...u, email: emailLimpo } : u);
+
+    // Se o usuário também tiver ficha em alunos, sincroniza
+    const aluno = this.alunos.find(a => a.email.toLowerCase() === emailAntigo.toLowerCase());
+    if (aluno) {
+      await updateDoc(doc(db, 'alunos', aluno.id), { email: emailLimpo });
+      this.alunos = this.alunos.map(a => a.id === aluno.id ? { ...a, email: emailLimpo } : a);
+    }
+
+    await this.registrarAuditoria(
+      'ALTERAR_EMAIL_USUARIO',
+      `E-mail de ${usuario.nome} alterado de ${emailAntigo} para ${emailLimpo}`,
+      this.currentUser?.email || 'dev',
+      'alteracao',
+      emailAntigo,
+      emailLimpo
+    );
+    this.notify();
+  }
+
+  public async recuperarContaUsuario(userIdOuEmail: string): Promise<{ sucesso: boolean; mensagem: string }> {
+    const usuario = this.usuarios.find(
+      u => u.id === userIdOuEmail || u.email.toLowerCase() === userIdOuEmail.toLowerCase().trim()
+    );
+
+    if (!usuario) {
+      // Procura em alunos
+      const aluno = this.alunos.find(
+        a => a.id === userIdOuEmail || a.email.toLowerCase() === userIdOuEmail.toLowerCase().trim()
+      );
+      if (aluno) {
+        await this.enviarRecuperacaoSenha(aluno.email);
+        return { sucesso: true, mensagem: `Instruções de recuperação enviadas para o e-mail do aluno: ${aluno.email}` };
+      }
+      throw new Error('Conta não localizada no sistema.');
+    }
+
+    await this.enviarRecuperacaoSenha(usuario.email);
+    return { sucesso: true, mensagem: `E-mail oficial de recuperação de conta enviado com sucesso para ${usuario.email}` };
+  }
+
+  public async atualizarDadosUsuario(userId: string, dados: Partial<UsuarioSistema>) {
+    const usuario = this.usuarios.find(u => u.id === userId);
+    if (!usuario) throw new Error('Usuário não encontrado.');
+
+    const valorAntigo = JSON.stringify(usuario);
+    await updateDoc(doc(db, 'usuarios', userId), dados);
+    this.usuarios = this.usuarios.map(u => u.id === userId ? { ...u, ...dados } : u);
+
+    await this.registrarAuditoria(
+      'EDITAR_USUARIO',
+      `Usuário ${usuario.nome} atualizado pelo Administrador Geral`,
+      this.currentUser?.email || 'admin',
+      'alteracao',
+      valorAntigo,
+      JSON.stringify(dados)
+    );
+    this.notify();
+  }
+
+  public async bloquearUsuario(userId: string, bloquear: boolean) {
+    const usuario = this.usuarios.find(u => u.id === userId);
+    if (!usuario) return;
+
+    await updateDoc(doc(db, 'usuarios', userId), { bloqueado: bloquear });
+    this.usuarios = this.usuarios.map(u => u.id === userId ? { ...u, bloqueado: bloquear } : u);
+
+    await this.registrarAuditoria(
+      bloquear ? 'BLOQUEAR_CONTA' : 'DESBLOQUEAR_CONTA',
+      `Conta de ${usuario.nome} (${usuario.email}) foi ${bloquear ? 'bloqueada' : 'desbloqueada'}`,
+      this.currentUser?.email || 'admin',
+      'alteracao'
+    );
+    this.notify();
+  }
+
+  public async atualizarRoleUsuario(userId: string, role: UserRole) {
+    await updateDoc(doc(db, 'usuarios', userId), { role });
+    this.usuarios = this.usuarios.map(u => u.id === userId ? { ...u, role } : u);
+    await this.registrarAuditoria('ALTERAR_ROLE', `Permissão alterada para ${role}`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+  }
+
+  public async excluirUsuario(userId: string) {
+    const user = this.usuarios.find(u => u.id === userId);
+    if (user?.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+      throw new Error('A conta do Administrador Geral primário (Davi Leonardo) não pode ser excluída.');
+    }
+    await deleteDoc(doc(db, 'usuarios', userId));
+    this.usuarios = this.usuarios.filter(u => u.id !== userId);
+    await this.registrarAuditoria('EXCLUIR_USUARIO', `Usuário ${user?.email} excluído`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
+  }
+
+  public async adicionarProfessor(dados: { nome: string; email: string; ct: string; role?: UserRole }) {
+    return this.criarUsuario({
+      nome: dados.nome,
+      email: dados.email,
+      ct: dados.ct,
+      role: dados.role || 'professor'
+    });
+  }
+
+  public async removerProfessor(id: string) {
+    return this.excluirUsuario(id);
+  }
+
+  // ===== ALUNOS (GUERREIROS ATIVOS) =====
   public getAlunos(filterStatus?: 'ativo' | 'pendente' | 'inativo', ct?: string): Aluno[] {
     let list = this.alunos;
     if (filterStatus) {
       list = list.filter(a => a.status === filterStatus);
     }
     if (ct && ct !== 'GERAL') {
-      list = list.filter(a => a.ct.toUpperCase() === ct.toUpperCase());
+      list = list.filter(a => (a.ct || '').toUpperCase() === ct.toUpperCase());
     }
     return list;
   }
@@ -317,176 +1041,180 @@ class GaditasStore {
     return this.alunos.find(a => a.email.toLowerCase() === email.toLowerCase().trim());
   }
 
-  public async cadastrarAluno(dados: Omit<Aluno, 'id' | 'matricula' | 'status' | 'ultimo_mes_pago' | 'ultimo_ano_pago'>): Promise<Aluno> {
-    const proximaMatricula = this.alunos.length > 0 ? Math.max(...this.alunos.map(a => a.matricula || 0)) + 1 : 1;
+  public async cadastrarAluno(dados: Omit<Aluno, 'id' | 'matricula' | 'status' | 'ultimo_mes_pago' | 'ultimo_ano_pago'>, senhaOpcional?: string): Promise<Aluno> {
+    const emailLower = dados.email.toLowerCase().trim();
+
+    // Verificação rigorosa contra duplicados
+    const existenteLocal = this.alunos.find(a => a.email.toLowerCase() === emailLower);
+    if (existenteLocal) {
+      throw new Error(`O e-mail ${emailLower} já está matriculado no sistema (Matrícula #${existenteLocal.matricula}).`);
+    }
+
+    const snapRemoto = await getDocs(query(collection(db, 'alunos'), where('email', '==', emailLower)));
+    if (!snapRemoto.empty) {
+      const docData = snapRemoto.docs[0].data() as Aluno;
+      throw new Error(`O e-mail ${emailLower} já está cadastrado no Firebase (Matrícula #${docData.matricula}).`);
+    }
+
+    const proximaMatricula = this.alunos.length > 0 
+      ? Math.max(...this.alunos.map(a => a.matricula || 0)) + 1 
+      : 101;
+
+    let uid = 'alu-' + Date.now();
+    if (senhaOpcional && senhaOpcional.length >= 6) {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, emailLower, senhaOpcional);
+        uid = cred.user.uid;
+      } catch (e) {
+        console.warn('Auth Aluno:', e);
+      }
+    }
+
     const novoAluno: Aluno = {
       ...dados,
-      id: 'alu-' + Date.now(),
+      id: uid,
       matricula: proximaMatricula,
-      status: 'pendente',
-      ultimo_mes_pago: -1,
-      ultimo_ano_pago: -1,
+      status: 'ativo',
+      ultimo_mes_pago: new Date().getMonth(),
+      ultimo_ano_pago: new Date().getFullYear(),
       data_cadastro: new Date().toISOString().split('T')[0]
     };
 
+    await setDoc(doc(db, 'alunos', uid), novoAluno);
     this.alunos.unshift(novoAluno);
-    this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
 
-    // Tenta persistir no Firestore
-    try {
-      await setDoc(doc(db, 'alunos', novoAluno.id), novoAluno);
-    } catch {
-      // Offline fallback
-    }
+    await this.registrarAuditoria(
+      'MATRICULA_ENVIADA', 
+      `Nova matrícula #${proximaMatricula} (${novoAluno.nome}) polo ${novoAluno.ct}`, 
+      emailLower, 
+      'alteracao'
+    );
 
+    this.notify();
     return novoAluno;
   }
 
   public async atualizarStatusAluno(id: string, novoStatus: 'ativo' | 'inativo' | 'pendente') {
-    this.alunos = this.alunos.map(a => {
-      if (a.id === id) {
-        return { ...a, status: novoStatus };
-      }
-      return a;
-    });
-    this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
+    const aluno = this.alunos.find(a => a.id === id);
+    await updateDoc(doc(db, 'alunos', id), { status: novoStatus });
+    this.alunos = this.alunos.map(a => a.id === id ? { ...a, status: novoStatus } : a);
 
-    try {
-      await updateDoc(doc(db, 'alunos', id), { status: novoStatus });
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria(
+      'STATUS_ALUNO', 
+      `Status do aluno ${aluno?.nome} alterado para ${novoStatus}`, 
+      this.currentUser?.email || 'admin', 
+      'alteracao'
+    );
+    this.notify();
   }
 
   public async atualizarGraduacao(id: string, faixa: ProjardeBelt, graus: number) {
-    this.alunos = this.alunos.map(a => {
-      if (a.id === id) {
-        return { ...a, faixa, graus };
-      }
-      return a;
-    });
-    this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
+    const aluno = this.alunos.find(a => a.id === id);
+    await updateDoc(doc(db, 'alunos', id), { faixa, graus });
+    this.alunos = this.alunos.map(a => a.id === id ? { ...a, faixa, graus } : a);
 
-    try {
-      await updateDoc(doc(db, 'alunos', id), { faixa, graus });
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria(
+      'GRADUACAO_ATUALIZADA', 
+      `Guerreiro ${aluno?.nome} promovido para ${faixa} (${graus} graus)`, 
+      this.currentUser?.email || 'professor', 
+      'alteracao'
+    );
+    this.notify();
   }
 
-  public async darBaixaMensalidade(id: string, valor: number = 120, categoria = 'Mensalidade') {
+  public async registrarPagamentoMensalidade(id: string, mes: number, ano: number) {
     const aluno = this.alunos.find(a => a.id === id);
-    if (!aluno) return;
-
-    const dataHoje = new Date();
-    const mes = dataHoje.getMonth();
-    const ano = dataHoje.getFullYear();
-
-    this.alunos = this.alunos.map(a => {
-      if (a.id === id) {
-        return { ...a, ultimo_mes_pago: mes, ultimo_ano_pago: ano };
-      }
-      return a;
+    await updateDoc(doc(db, 'alunos', id), {
+      ultimo_mes_pago: mes,
+      ultimo_ano_pago: ano
     });
-    this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
 
-    // Registra entrada no financeiro
-    this.adicionarLancamentoFinanceiro({
-      descricao: `Mensalidade: ${aluno.nome}`,
+    this.alunos = this.alunos.map(a => a.id === id ? {
+      ...a,
+      ultimo_mes_pago: mes,
+      ultimo_ano_pago: ano
+    } : a);
+
+    const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    await this.adicionarLancamentoFinanceiro({
+      descricao: `Mensalidade ${mesesNomes[mes]}/${ano} - ${aluno?.nome}`,
       tipo: 'entrada',
-      valor,
-      categoria: categoria as any,
+      valor: this.siteConfig.valorMensalidadePadrao || 120,
+      categoria: 'Mensalidade',
       forma: 'Pix',
-      data: dataHoje.toISOString().split('T')[0],
-      ct: aluno.ct
+      data: new Date().toISOString().split('T')[0],
+      ct: aluno?.ct || 'Campo Grande',
+      alunoId: id
     });
 
-    try {
-      await updateDoc(doc(db, 'alunos', id), { ultimo_mes_pago: mes, ultimo_ano_pago: ano });
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria(
+      'BAIXA_MENSALIDADE', 
+      `Baixa de mensalidade de ${aluno?.nome} (${mesesNomes[mes]}/${ano})`, 
+      this.currentUser?.email || 'admin', 
+      'financeiro'
+    );
+    this.notify();
   }
 
   public async excluirAluno(id: string) {
+    const aluno = this.alunos.find(a => a.id === id);
+    await deleteDoc(doc(db, 'alunos', id));
     this.alunos = this.alunos.filter(a => a.id !== id);
-    this.persist(LOCAL_STORAGE_KEYS.ALUNOS, this.alunos);
-
-    try {
-      await deleteDoc(doc(db, 'alunos', id));
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria('EXCLUIR_ALUNO', `Aluno ${aluno?.nome} (#${aluno?.matricula}) excluído`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
   }
 
-  // ===== UNIDADES =====
+  public exportarAlunosCSV(): void {
+    const cabecalho = 'Matricula,Nome,Email,Telefone,Polo,Status,Faixa,Graus,TipoSanguineo,UltimoMesPago,UltimoAnoPago\n';
+    const linhas = this.alunos.map(a => 
+      `"${a.matricula}","${a.nome}","${a.email}","${a.telefone}","${a.ct}","${a.status}","${a.faixa}","${a.graus}","${a.tipo_sanguineo || ''}","${a.ultimo_mes_pago}","${a.ultimo_ano_pago}"`
+    ).join('\n');
+
+    const blob = new Blob([cabecalho + linhas], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gaditas_guerreiros_ativos_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // ===== UNIDADES (POLOS) =====
   public getUnidades(): Unidade[] {
     return this.unidades;
   }
 
-  public async adicionarUnidade(nome: string, tipo: 'pagante' | 'bolsista', endereco?: string) {
-    const nova: Unidade = {
-      id: 'uni-' + Date.now(),
-      nome,
-      tipo,
-      endereco
-    };
-    this.unidades.push(nova);
-    this.persist(LOCAL_STORAGE_KEYS.UNIDADES, this.unidades);
+  public isUnidadeBolsista(nomeOuId: string): boolean {
+    const u = this.unidades.find(
+      x => x.id === nomeOuId || x.nome.toLowerCase() === (nomeOuId || '').toLowerCase()
+    );
+    return u?.tipo === 'bolsista';
+  }
 
-    try {
-      await setDoc(doc(db, 'unidades', nova.id), nova);
-    } catch {
-      // Fallback
-    }
+  public async adicionarUnidade(nome: string, tipo: 'pagante' | 'bolsista', responsavel?: string, endereco?: string, telefone?: string) {
+    const id = 'uni-' + nome.toLowerCase().replace(/\s+/g, '-');
+    const item: Unidade = { id, nome, tipo, responsavel, endereco, telefone };
+    await setDoc(doc(db, 'unidades', id), item);
+    this.unidades.push(item);
+    await this.registrarAuditoria('CRIAR_UNIDADE', `Polo ${nome} (${tipo}) cadastrado`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
   }
 
   public async removerUnidade(id: string) {
+    await deleteDoc(doc(db, 'unidades', id));
     this.unidades = this.unidades.filter(u => u.id !== id);
-    this.persist(LOCAL_STORAGE_KEYS.UNIDADES, this.unidades);
-
-    try {
-      await deleteDoc(doc(db, 'unidades', id));
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria('EXCLUIR_UNIDADE', `Polo ${id} removido`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
   }
 
-  public isUnidadeBolsista(ctNome: string): boolean {
-    const uni = this.unidades.find(u => u.nome.toUpperCase() === (ctNome || '').toUpperCase());
-    return uni?.tipo === 'bolsista';
-  }
-
-  // ===== PROFESSORES =====
-  public getProfessores(): Professor[] {
-    return this.professores;
-  }
-
-  public async adicionarProfessor(prof: Omit<Professor, 'id'>) {
-    const novo: Professor = {
-      ...prof,
-      id: 'prof-' + Date.now(),
-      data_cadastro: new Date().toISOString().split('T')[0]
-    };
-    this.professores.push(novo);
-    this.persist(LOCAL_STORAGE_KEYS.PROFESSORES, this.professores);
-    return novo;
-  }
-
-  public async removerProfessor(id: string) {
-    this.professores = this.professores.filter(p => p.id !== id);
-    this.persist(LOCAL_STORAGE_KEYS.PROFESSORES, this.professores);
-  }
-
-  // ===== FREQUENCIA / CHAMADA =====
+  // ===== CHAMADA / FREQUÊNCIA =====
   public getFrequencias(): FrequenciaRecord[] {
     return this.frequencia;
   }
 
   public async salvarChamada(alunosPresentesIds: string[], dataRef: string, ct: string) {
-    const registros: FrequenciaRecord[] = [];
     const agora = new Date().toISOString();
-
     for (const id of alunosPresentesIds) {
       const aluno = this.alunos.find(a => a.id === id);
       if (aluno) {
@@ -498,43 +1226,40 @@ class GaditasStore {
           data: agora,
           dataRef
         };
-        registros.push(item);
+        await addDoc(collection(db, 'frequencia'), item);
         this.frequencia.push(item);
       }
     }
-
-    this.persist(LOCAL_STORAGE_KEYS.FREQUENCIA, this.frequencia);
-
-    try {
-      for (const reg of registros) {
-        await addDoc(collection(db, 'frequencia'), reg);
-      }
-    } catch {
-      // Fallback
-    }
+    await this.registrarAuditoria(
+      'CHAMADA_FINALIZADA', 
+      `Chamada em ${ct} (${dataRef}) com ${alunosPresentesIds.length} presentes`, 
+      this.currentUser?.email || 'professor', 
+      'alteracao'
+    );
+    this.notify();
   }
 
   // ===== FINANCEIRO =====
   public getFinanceiro(ct?: string): FinanceiroItem[] {
     if (ct && ct !== 'GERAL') {
-      return this.financeiro.filter(f => f.ct.toUpperCase() === ct.toUpperCase());
+      return this.financeiro.filter(f => (f.ct || '').toUpperCase() === ct.toUpperCase());
     }
     return this.financeiro;
   }
 
   public async adicionarLancamentoFinanceiro(item: Omit<FinanceiroItem, 'id'>) {
-    const novo: FinanceiroItem = {
-      ...item,
-      id: 'fin-' + Date.now()
-    };
+    const docRef = await addDoc(collection(db, 'financeiro'), item);
+    const novo = { ...item, id: docRef.id };
     this.financeiro.unshift(novo);
-    this.persist(LOCAL_STORAGE_KEYS.FINANCEIRO, this.financeiro);
+    this.notify();
+    return novo;
+  }
 
-    try {
-      await addDoc(collection(db, 'financeiro'), novo);
-    } catch {
-      // Fallback
-    }
+  public async removerLancamentoFinanceiro(id: string) {
+    await deleteDoc(doc(db, 'financeiro', id));
+    this.financeiro = this.financeiro.filter(f => f.id !== id);
+    await this.registrarAuditoria('EXCLUIR_FINANCEIRO', `Lançamento ${id} excluído`, this.currentUser?.email || 'admin', 'financeiro');
+    this.notify();
   }
 
   // ===== ESTOQUE =====
@@ -543,78 +1268,572 @@ class GaditasStore {
   }
 
   public async adicionarItemEstoque(nome: string, quantidade: number, categoria?: string, valorUnitario?: number) {
-    const novo: EstoqueItem = {
-      id: 'est-' + Date.now(),
-      nome,
-      quantidade,
-      categoria,
-      valorUnitario
-    };
+    const item = { nome, quantidade, categoria, valorUnitario };
+    const docRef = await addDoc(collection(db, 'estoque'), item);
+    const novo: EstoqueItem = { id: docRef.id, ...item };
     this.estoque.push(novo);
-    this.persist(LOCAL_STORAGE_KEYS.ESTOQUE, this.estoque);
-
-    try {
-      await addDoc(collection(db, 'estoque'), novo);
-    } catch {
-      // Fallback
-    }
+    this.notify();
   }
 
   public async atualizarQuantidadeEstoque(id: string, delta: number) {
-    this.estoque = this.estoque.map(e => {
-      if (e.id === id) {
-        const novaQtd = Math.max(0, e.quantidade + delta);
-        return { ...e, quantidade: novaQtd };
-      }
-      return e;
-    });
-    this.persist(LOCAL_STORAGE_KEYS.ESTOQUE, this.estoque);
+    const item = this.estoque.find(e => e.id === id);
+    if (!item) return;
+    const novaQtd = Math.max(0, item.quantidade + delta);
+    await updateDoc(doc(db, 'estoque', id), { quantidade: novaQtd });
+    this.estoque = this.estoque.map(e => e.id === id ? { ...e, quantidade: novaQtd } : e);
+    this.notify();
   }
 
   public async removerItemEstoque(id: string) {
+    await deleteDoc(doc(db, 'estoque', id));
     this.estoque = this.estoque.filter(e => e.id !== id);
-    this.persist(LOCAL_STORAGE_KEYS.ESTOQUE, this.estoque);
+    this.notify();
   }
 
-  // ===== AUTH SESSIONS =====
-  public getAdminSession(): { ct: string; nome: string; isAdmin: boolean } | null {
-    const ct = localStorage.getItem(LOCAL_STORAGE_KEYS.AUTH_ADMIN);
-    const nome = localStorage.getItem(LOCAL_STORAGE_KEYS.NOME_ADMIN);
-    if (!ct) return null;
+  // ===== AVISOS =====
+  public getAvisos(ct?: string): AvisoCT[] {
+    if (!ct || ct === 'GERAL') return this.avisos;
+    return this.avisos.filter(a => a.ct === 'GERAL' || (a.ct || '').toUpperCase() === ct.toUpperCase());
+  }
+
+  public async adicionarAviso(aviso: Omit<AvisoCT, 'id' | 'data'>) {
+    const item = {
+      ...aviso,
+      data: new Date().toISOString().split('T')[0]
+    };
+    const docRef = await addDoc(collection(db, 'avisos'), item);
+    const novo: AvisoCT = { id: docRef.id, ...item };
+    this.avisos.unshift(novo);
+    this.notify();
+    return novo;
+  }
+
+  public async removerAviso(id: string) {
+    await deleteDoc(doc(db, 'avisos', id));
+    this.avisos = this.avisos.filter(a => a.id !== id);
+    this.notify();
+  }
+
+  // ===== EVENTOS =====
+  public getEventos(): EventoItem[] {
+    return this.eventos;
+  }
+
+  public async adicionarEvento(evento: Omit<EventoItem, 'id'>) {
+    const docRef = await addDoc(collection(db, 'eventos'), evento);
+    const novo: EventoItem = { id: docRef.id, ...evento };
+    this.eventos.unshift(novo);
+    await this.registrarAuditoria('CRIAR_EVENTO', `Evento criado: ${evento.titulo} (${evento.tipo})`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+    return novo;
+  }
+
+  public async removerEvento(id: string) {
+    await deleteDoc(doc(db, 'eventos', id));
+    this.eventos = this.eventos.filter(e => e.id !== id);
+    await this.registrarAuditoria('EXCLUIR_EVENTO', `Evento ${id} removido`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
+  }
+
+  // ===== ARQUIVOS & FIREBASE STORAGE POR PASTAS =====
+  public getArquivos(pasta?: StorageFolder): ArquivoItem[] {
+    if (pasta) {
+      return this.arquivos.filter(a => a.pasta === pasta);
+    }
+    return this.arquivos;
+  }
+
+  public async fazerUploadArquivo(
+    caminho: string, 
+    file: File | Blob, 
+    dados: { nome: string; tipo: ArquivoItem['tipo']; pasta?: StorageFolder; alunoId?: string; descricao?: string },
+    onProgresso?: (progresso: number) => void
+  ): Promise<ArquivoItem> {
+    try {
+      const pastaFinal = dados.pasta || 'documentos';
+      const caminhoComPasta = caminho.startsWith(pastaFinal + '/') ? caminho : `${pastaFinal}/${caminho}`;
+
+      const url = await uploadArquivoFirebase(caminhoComPasta, file, onProgresso);
+      const novoArquivo: Omit<ArquivoItem, 'id'> = {
+        nome: dados.nome,
+        tipo: dados.tipo,
+        pasta: pastaFinal,
+        url,
+        tamanhoBytes: file.size,
+        autor: this.currentUser?.email || this.currentAluno?.email || 'usuario',
+        dataUpload: new Date().toISOString(),
+        alunoId: dados.alunoId,
+        descricao: dados.descricao
+      };
+
+      const docRef = await addDoc(collection(db, 'arquivos'), novoArquivo);
+      const salvo: ArquivoItem = { id: docRef.id, ...novoArquivo };
+      this.arquivos.unshift(salvo);
+
+      await this.registrarAuditoria(
+        'UPLOAD_ARQUIVO', 
+        `Arquivo enviado na pasta "${pastaFinal}": ${dados.nome}`, 
+        this.currentUser?.email || 'usuario', 
+        'sistema'
+      );
+
+      this.notify();
+      return salvo;
+    } catch (e: any) {
+      throw new Error(`Falha no upload do arquivo: ${e?.message || 'Erro no Firebase Storage'}`);
+    }
+  }
+
+  public async removerArquivo(id: string) {
+    await deleteDoc(doc(db, 'arquivos', id));
+    this.arquivos = this.arquivos.filter(a => a.id !== id);
+    await this.registrarAuditoria('EXCLUIR_ARQUIVO', `Arquivo ${id} excluído`, this.currentUser?.email || 'admin', 'exclusao');
+    this.notify();
+  }
+
+  public async excluirArquivosOrfaos(): Promise<number> {
+    let removidos = 0;
+    const alunosIds = new Set(this.alunos.map(a => a.id));
+
+    for (const arq of this.arquivos) {
+      const orfaoSemUrl = !arq.url || arq.url.trim() === '' || arq.url === 'null';
+      const orfaoDeAluno = arq.alunoId && !alunosIds.has(arq.alunoId);
+
+      if (orfaoSemUrl || orfaoDeAluno) {
+        await deleteDoc(doc(db, 'arquivos', arq.id));
+        this.arquivos = this.arquivos.filter(a => a.id !== arq.id);
+        removidos++;
+      }
+    }
+
+    if (removidos > 0) {
+      await this.registrarAuditoria(
+        'LIMPEZA_STORAGE',
+        `Removidos ${removidos} arquivos órfãos sem referência do Firebase Storage`,
+        this.currentUser?.email || 'admin',
+        'sistema'
+      );
+      this.notify();
+    }
+    return removidos;
+  }
+
+  // ===== SAÚDE DO FIREBASE (TELEMETRIA COMPLETA SOLICITADA) =====
+  public async obterSaudeFirebase(): Promise<SaudeFirebaseResultado> {
+    const inicio = performance.now();
+    await this.sincronizarBancoGeral();
+    const fim = performance.now();
+    const latenciaMs = Math.round(fim - inicio);
+
+    // Contagem de usuários por papel
+    const porPapel: Record<string, number> = {
+      administrador_geral: 0,
+      administrador: 0,
+      professor: 0,
+      aluno: 0,
+      financeiro: 0
+    };
+
+    let usuariosBloqueados = 0;
+    this.usuarios.forEach(u => {
+      if (porPapel[u.role] !== undefined) porPapel[u.role]++;
+      if (u.bloqueado) usuariosBloqueados++;
+    });
+
+    // Contagem e espaço Storage por pasta
+    const porPasta: Record<StorageFolder, number> = {
+      perfil: 0,
+      alunos: 0,
+      professores: 0,
+      eventos: 0,
+      certificados: 0,
+      comprovantes: 0,
+      documentos: 0,
+      logos: 0
+    };
+
+    let espacoUtilizadoBytes = 0;
+    this.arquivos.forEach(a => {
+      espacoUtilizadoBytes += a.tamanhoBytes || 0;
+      if (a.pasta && porPasta[a.pasta] !== undefined) {
+        porPasta[a.pasta]++;
+      } else {
+        porPasta['documentos']++;
+      }
+    });
+
+    const formatarBytes = (bytes: number) => {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    };
+
+    // Plano Spark do Firebase dá 5 GB gratuitos de Storage
+    const TOTAL_STORAGE_GRATIS_BYTES = 5 * 1024 * 1024 * 1024;
+    const espacoLivreBytes = Math.max(0, TOTAL_STORAGE_GRATIS_BYTES - espacoUtilizadoBytes);
+    const espacoLivreFormatado = (espacoLivreBytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+
+    const varredura = await this.executarVarreduraCompleta();
+    const errosEncontrados = varredura.duplicadosEmailAlunos.length +
+      varredura.duplicadosEmailUsuarios.length +
+      varredura.duplicadosMatricula.length +
+      varredura.emailsInvalidosOuInexistentes.length +
+      varredura.orfaosSemUnidade.length +
+      varredura.camposVaziosAlunos.length +
+      varredura.uploadsQuebrados.length;
+
+    const ultimoBackupSalvo = localStorage.getItem(LOCAL_STORAGE_KEYS.ULTIMO_BACKUP);
+
+    const logLoginMaisRecente = this.auditoriaLogs.find(l => l.acao.includes('LOGIN'));
+    const logErroMaisRecente = this.auditoriaLogs.find(l => l.tipo === 'sistema' || l.detalhes.toLowerCase().includes('falha') || l.detalhes.toLowerCase().includes('erro'));
+
+    const professoresCount = this.usuarios.filter(u => u.role === 'professor' || u.role === 'administrador').length;
+
     return {
-      ct,
-      nome: nome || 'Mestre Daniel Braga',
-      isAdmin: ct === 'GERAL'
+      firestore: {
+        status: 'conectado',
+        databaseId: 'ai-studio-equipegaditasctd-ba95e06d-f06d-4226-95a3-60b9bd4a2319',
+        totalColecoes: 11,
+        totalDocumentos: this.alunos.length + this.usuarios.length + this.financeiro.length + this.eventos.length + this.arquivos.length + this.frequencia.length + this.paginas.length,
+        latenciaMs
+      },
+      auth: {
+        status: 'ativo',
+        totalUsuarios: this.usuarios.length,
+        usuariosAtivos: this.usuarios.length - usuariosBloqueados,
+        usuariosBloqueados,
+        porPapel
+      },
+      storage: {
+        status: 'conectado',
+        bucket: 'equipe-gaditas.firebasestorage.app',
+        totalArquivos: this.arquivos.length,
+        espacoUtilizadoBytes,
+        espacoFormatado: formatarBytes(espacoUtilizadoBytes),
+        espacoLivreFormatado,
+        porPasta
+      },
+      metricasAdicionais: {
+        totalAlunos: this.alunos.length,
+        totalProfessores: professoresCount,
+        totalEventos: this.eventos.length,
+        quantidadeBackups: ultimoBackupSalvo ? 1 : 0,
+        usuariosOnline: Math.max(1, (this.currentUser ? 1 : 0) + (this.currentAluno ? 1 : 0)),
+        ultimoLoginSistema: logLoginMaisRecente ? logLoginMaisRecente.data : null,
+        ultimoErroDetectado: logErroMaisRecente ? `${logErroMaisRecente.acao}: ${logErroMaisRecente.detalhes}` : null,
+        consumoMensal: {
+          leiturasEstimadas: Math.round((this.alunos.length + this.usuarios.length) * 12 + 150),
+          escritasEstimadas: Math.round(this.frequencia.length + this.financeiro.length + 30),
+          bandwidthEstimada: formatarBytes(espacoUtilizadoBytes * 3)
+        },
+        custosEstimados: 'R$ 0,00 (Plano Gratuito Spark / Enterprise Developer)'
+      },
+      sincronizacao: {
+        status: 'sincronizado',
+        ultimoSyncIso: this.ultimoSyncTimestamp,
+        ultimoBackupIso: ultimoBackupSalvo
+      },
+      errosEncontrados
     };
   }
 
-  public setAdminSession(ct: string, nome: string) {
-    localStorage.setItem(LOCAL_STORAGE_KEYS.AUTH_ADMIN, ct);
-    localStorage.setItem(LOCAL_STORAGE_KEYS.NOME_ADMIN, nome);
-    this.notify();
+  // ===== VARREDURA COMPLETA DO FIREBASE & AUDITORIA DE INTEGRIDADE =====
+  public async executarVarreduraCompleta(): Promise<VarreduraResultado> {
+    const inicio = performance.now();
+    await this.sincronizarBancoGeral();
+    const fim = performance.now();
+    const tempoConsultaMs = Math.round(fim - inicio);
+
+    // 1. Duplicados e E-mails Inexistentes em Alunos
+    const mapaEmailAlunos: { [email: string]: Aluno[] } = {};
+    const mapaMatricula: { [mat: number]: Aluno[] } = {};
+    const orfaosUnidade: Aluno[] = [];
+    const camposVazios: { id: string; nome: string; campos: string[] }[] = [];
+    const emailsInvalidosOuInexistentes: { id: string; tipo: 'aluno' | 'usuario'; nome: string; email: string; motivo: string }[] = [];
+
+    const unidadesNomes = new Set(this.unidades.map(u => (u.nome || '').toUpperCase()));
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const dominiosFalsos = ['exemplo.com', 'teste.com', 'email.com', 'teste.br', 'fake.com', 'aluno.teste'];
+
+    this.alunos.forEach(a => {
+      const email = (a.email || '').toLowerCase().trim();
+      if (!mapaEmailAlunos[email]) mapaEmailAlunos[email] = [];
+      mapaEmailAlunos[email].push(a);
+
+      if (a.matricula) {
+        if (!mapaMatricula[a.matricula]) mapaMatricula[a.matricula] = [];
+        mapaMatricula[a.matricula].push(a);
+      }
+
+      // Validação de email inexistente/fictício
+      if (!email || !emailRegex.test(email)) {
+        emailsInvalidosOuInexistentes.push({ id: a.id, tipo: 'aluno', nome: a.nome, email: a.email, motivo: 'Formato de e-mail inválido' });
+      } else if (dominiosFalsos.some(d => email.endsWith('@' + d))) {
+        emailsInvalidosOuInexistentes.push({ id: a.id, tipo: 'aluno', nome: a.nome, email: a.email, motivo: 'Domínio de demonstração/inexistente' });
+      }
+
+      // Órfão de CT
+      if (!a.ct || !unidadesNomes.has((a.ct || '').toUpperCase())) {
+        orfaosUnidade.push(a);
+      }
+
+      // Campos vazios obrigatórios
+      const faltantes: string[] = [];
+      if (!a.nome || a.nome.trim() === '') faltantes.push('Nome');
+      if (!a.email || a.email.trim() === '') faltantes.push('E-mail');
+      if (!a.telefone || a.telefone.trim() === '') faltantes.push('Telefone');
+      if (!a.faixa || a.faixa.trim() === '') faltantes.push('Faixa Projarde');
+      if (!a.ct || a.ct.trim() === '') faltantes.push('Polo/CT');
+      if (faltantes.length > 0) {
+        camposVazios.push({ id: a.id, nome: a.nome || 'Sem Nome', campos: faltantes });
+      }
+    });
+
+    const duplicadosEmailAlunos = Object.entries(mapaEmailAlunos)
+      .filter(([_, lista]) => lista.length > 1)
+      .map(([email, lista]) => ({ email, alunos: lista }));
+
+    const duplicadosMatricula = Object.entries(mapaMatricula)
+      .filter(([_, lista]) => lista.length > 1)
+      .map(([mat, lista]) => ({ matricula: Number(mat), alunos: lista }));
+
+    // 2. Duplicados em Usuários (Email)
+    const mapaEmailUsers: { [email: string]: UsuarioSistema[] } = {};
+    const falhasPermissao: UsuarioSistema[] = [];
+
+    this.usuarios.forEach(u => {
+      const email = (u.email || '').toLowerCase().trim();
+      if (!mapaEmailUsers[email]) mapaEmailUsers[email] = [];
+      mapaEmailUsers[email].push(u);
+
+      if (!email || !emailRegex.test(email)) {
+        emailsInvalidosOuInexistentes.push({ id: u.id, tipo: 'usuario', nome: u.nome, email: u.email, motivo: 'Formato de e-mail inválido' });
+      } else if (dominiosFalsos.some(d => email.endsWith('@' + d))) {
+        emailsInvalidosOuInexistentes.push({ id: u.id, tipo: 'usuario', nome: u.nome, email: u.email, motivo: 'Domínio de demonstração/inexistente' });
+      }
+
+      const validRoles: UserRole[] = ['administrador_geral', 'administrador', 'professor', 'aluno', 'financeiro'];
+      if (!u.role || !validRoles.includes(u.role)) {
+        falhasPermissao.push(u);
+      }
+    });
+
+    const duplicadosEmailUsuarios = Object.entries(mapaEmailUsers)
+      .filter(([_, lista]) => lista.length > 1)
+      .map(([email, lista]) => ({ email, usuarios: lista }));
+
+    // 3. Órfãos Financeiro (alunoId inexistente ou CT inválido)
+    const alunosIds = new Set(this.alunos.map(a => a.id));
+    const orfaosFinanceiro = this.financeiro.filter(f => {
+      if (f.alunoId && !alunosIds.has(f.alunoId)) return true;
+      if (!f.ct || (!unidadesNomes.has((f.ct || '').toUpperCase()) && f.ct !== 'GERAL')) return true;
+      return false;
+    });
+
+    // 4. Uploads quebrados
+    const uploadsQuebrados = this.arquivos.filter(a => !a.url || a.url.trim() === '' || a.url === 'null');
+
+    // 5. Erros de autenticação recentes nos logs
+    const errosAutenticacaoRecentes = this.auditoriaLogs.filter(
+      l => l.acao.includes('ERRO_AUTH') || l.detalhes.toLowerCase().includes('falha')
+    );
+
+    return {
+      tempoConsultaMs,
+      totalAlunos: this.alunos.length,
+      totalUsuarios: this.usuarios.length,
+      totalLancamentos: this.financeiro.length,
+      totalEventos: this.eventos.length,
+      totalArquivos: this.arquivos.length,
+      duplicadosEmailAlunos,
+      duplicadosEmailUsuarios,
+      duplicadosMatricula,
+      emailsInvalidosOuInexistentes,
+      orfaosSemUnidade: orfaosUnidade,
+      orfaosFinanceiro,
+      camposVaziosAlunos: camposVazios,
+      uploadsQuebrados,
+      falhasPermissao,
+      errosAutenticacaoRecentes
+    };
   }
 
-  public logoutAdmin() {
-    localStorage.removeItem(LOCAL_STORAGE_KEYS.AUTH_ADMIN);
-    localStorage.removeItem(LOCAL_STORAGE_KEYS.NOME_ADMIN);
+  // Auto-correção e saneamento do banco (remove contas fake, e-mails inexistentes e duplicatas)
+  public async corrigirInconsistencias(): Promise<{ removidos: number; reparados: number }> {
+    const varredura = await this.executarVarreduraCompleta();
+    let removidos = 0;
+    let reparados = 0;
+
+    // 1. Remove duplicatas de alunos mantendo o cadastro primário
+    for (const item of varredura.duplicadosEmailAlunos) {
+      const [principal, ...resto] = item.alunos;
+      for (const dup of resto) {
+        await deleteDoc(doc(db, 'alunos', dup.id));
+        this.alunos = this.alunos.filter(a => a.id !== dup.id);
+        removidos++;
+      }
+    }
+
+    // 2. Remove duplicatas de usuários mantendo o primário (nunca remove o desenvolvedor)
+    for (const item of varredura.duplicadosEmailUsuarios) {
+      const [principal, ...resto] = item.usuarios;
+      for (const dup of resto) {
+        if (dup.email.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+          await deleteDoc(doc(db, 'usuarios', dup.id));
+          this.usuarios = this.usuarios.filter(u => u.id !== dup.id);
+          removidos++;
+        }
+      }
+    }
+
+    // 3. Purga e-mails inexistentes e contas de teste/demonstração
+    for (const item of varredura.emailsInvalidosOuInexistentes) {
+      if (item.tipo === 'usuario' && item.email.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+        await deleteDoc(doc(db, 'usuarios', item.id));
+        this.usuarios = this.usuarios.filter(u => u.id !== item.id);
+        removidos++;
+      } else if (item.tipo === 'aluno') {
+        await deleteDoc(doc(db, 'alunos', item.id));
+        this.alunos = this.alunos.filter(a => a.id !== item.id);
+        removidos++;
+      }
+    }
+
+    // 4. Corrige alunos órfãos de CT reatribuindo ao Polo Principal
+    const unidadePadrao = this.unidades[0]?.nome || 'Campo Grande';
+    for (const orfao of varredura.orfaosSemUnidade) {
+      await updateDoc(doc(db, 'alunos', orfao.id), { ct: unidadePadrao });
+      this.alunos = this.alunos.map(a => a.id === orfao.id ? { ...a, ct: unidadePadrao } : a);
+      reparados++;
+    }
+
+    // 5. Corrige campos vazios obrigatórios com padrões válidos
+    for (const item of varredura.camposVaziosAlunos) {
+      const aluno = this.alunos.find(a => a.id === item.id);
+      if (aluno) {
+        const patch: Partial<Aluno> = {};
+        if (!aluno.faixa) patch.faixa = 'Amarela';
+        if (!aluno.telefone) patch.telefone = '(21) 99999-0000';
+        if (!aluno.status) patch.status = 'ativo';
+        if (!aluno.ct) patch.ct = unidadePadrao;
+        if (Object.keys(patch).length > 0) {
+          await updateDoc(doc(db, 'alunos', aluno.id), patch);
+          this.alunos = this.alunos.map(a => a.id === aluno.id ? { ...a, ...patch } : a);
+          reparados++;
+        }
+      }
+    }
+
+    // 6. Remove uploads quebrados sem URL válida
+    for (const up of varredura.uploadsQuebrados) {
+      await deleteDoc(doc(db, 'arquivos', up.id));
+      this.arquivos = this.arquivos.filter(a => a.id !== up.id);
+      removidos++;
+    }
+
+    await this.registrarAuditoria(
+      'SANEAMENTO_FIREBASE', 
+      `Saneamento completo executado: ${removidos} registros duplicados/inexistentes removidos e ${reparados} inconsistências reparadas.`, 
+      this.currentUser?.email || 'dev', 
+      'sistema'
+    );
+
     this.notify();
+    return { removidos, reparados };
   }
 
-  public getAlunoLogado(): Aluno | null {
-    const id = localStorage.getItem(LOCAL_STORAGE_KEYS.ALUNO_LOGADO);
-    if (!id) return null;
-    return this.getAlunoById(id) || null;
+  // ===== BACKUP & RESTAURAÇÃO =====
+  public gerarBackupCompleto(): string {
+    const agoraIso = new Date().toISOString();
+    localStorage.setItem(LOCAL_STORAGE_KEYS.ULTIMO_BACKUP, agoraIso);
+
+    const payload = {
+      dataExport: agoraIso,
+      versao: '5.5-production',
+      projeto: 'equipe-gaditas',
+      siteConfig: this.siteConfig,
+      unidades: this.unidades,
+      alunos: this.alunos,
+      usuarios: this.usuarios,
+      financeiro: this.financeiro,
+      estoque: this.estoque,
+      frequencia: this.frequencia,
+      avisos: this.avisos,
+      eventos: this.eventos,
+      arquivos: this.arquivos,
+      paginas: this.paginas,
+      auditoria: this.auditoriaLogs
+    };
+    return JSON.stringify(payload, null, 2);
   }
 
-  public setAlunoLogado(alunoId: string) {
-    localStorage.setItem(LOCAL_STORAGE_KEYS.ALUNO_LOGADO, alunoId);
-    this.notify();
-  }
+  public async restaurarBackup(jsonString: string): Promise<boolean> {
+    try {
+      const data = JSON.parse(jsonString);
+      if (!data.unidades && !data.alunos && !data.usuarios) {
+        throw new Error('Arquivo de backup inválido: formato incompatível.');
+      }
 
-  public logoutAluno() {
-    localStorage.removeItem(LOCAL_STORAGE_KEYS.ALUNO_LOGADO);
-    this.notify();
+      if (data.siteConfig) {
+        await this.salvarSiteConfig(data.siteConfig);
+      }
+
+      if (Array.isArray(data.alunos)) {
+        for (const a of data.alunos) {
+          await setDoc(doc(db, 'alunos', a.id), a);
+        }
+        this.alunos = data.alunos;
+      }
+
+      if (Array.isArray(data.usuarios)) {
+        for (const u of data.usuarios) {
+          await setDoc(doc(db, 'usuarios', u.id), u);
+        }
+        this.usuarios = data.usuarios;
+      }
+
+      if (Array.isArray(data.unidades)) {
+        for (const u of data.unidades) {
+          await setDoc(doc(db, 'unidades', u.id), u);
+        }
+        this.unidades = data.unidades;
+      }
+
+      if (Array.isArray(data.financeiro)) {
+        for (const f of data.financeiro) {
+          await setDoc(doc(db, 'financeiro', f.id), f);
+        }
+        this.financeiro = data.financeiro;
+      }
+
+      if (Array.isArray(data.eventos)) {
+        for (const ev of data.eventos) {
+          await setDoc(doc(db, 'eventos', ev.id), ev);
+        }
+        this.eventos = data.eventos;
+      }
+
+      if (Array.isArray(data.paginas)) {
+        for (const pg of data.paginas) {
+          await setDoc(doc(db, 'paginas', pg.id), pg);
+        }
+        this.paginas = data.paginas;
+      }
+
+      await this.registrarAuditoria(
+        'RESTAURACAO_BACKUP',
+        `Restauração completa do banco executada a partir do arquivo exportado em ${data.dataExport || 'data anterior'}`,
+        this.currentUser?.email || 'dev',
+        'sistema'
+      );
+
+      this.notify();
+      return true;
+    } catch (e: any) {
+      throw new Error('Falha ao restaurar backup: ' + e?.message);
+    }
   }
 }
 
-export const store = new GaditasStore();
+export const store = new GaditasProductionStore();

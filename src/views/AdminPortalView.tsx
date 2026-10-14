@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
-import { Aluno, Unidade, Professor, FinanceiroItem, EstoqueItem, ProjardeBelt } from '../types';
+import { Aluno, Unidade, Professor, FinanceiroItem, EstoqueItem, ProjardeBelt, AvisoCT } from '../types';
 import { BeltDisplay } from '../components/BeltDisplay';
 import { PrintableAthleteCard } from '../components/PrintableAthleteCard';
+import { AthleteCardID } from '../components/AthleteCardID';
+import { BeltProgressionModal } from '../components/BeltProgressionModal';
+import { WeightCategoryCalculator } from '../components/WeightCategoryCalculator';
+import { FirebaseDatabasePanel } from '../components/FirebaseDatabasePanel';
+import { FirebaseStorageManager } from '../components/FirebaseStorageManager';
+import { FirebaseHealthView } from '../components/FirebaseHealthView';
+import { DeveloperCmsPanel } from '../components/DeveloperCmsPanel';
+import { EventosManager } from '../components/EventosManager';
 import { 
   LayoutDashboard, 
   UserCheck, 
@@ -33,11 +41,22 @@ import {
   Phone, 
   HeartPulse,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Download,
+  MessageCircle,
+  Bell,
+  Scale,
+  IdCard,
+  BookOpen,
+  Database,
+  UploadCloud,
+  Calendar as CalendarIcon,
+  Activity,
+  Code
 } from 'lucide-react';
 
 interface AdminPortalViewProps {
-  adminLogado: { ct: string; nome: string; isAdmin: boolean } | null;
+  adminLogado: { ct: string; nome: string; isAdmin: boolean; role?: string } | null;
   onLogout: () => void;
   onNavigate: (view: string) => void;
 }
@@ -53,6 +72,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [ctSelecionadoLogin, setCtSelecionadoLogin] = useState('GERAL');
   const [erroLogin, setErroLogin] = useState('');
   const [loadingLogin, setLoadingLogin] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
 
   // Sub-abas do ERP
   const [activeTab, setActiveTab] = useState<
@@ -66,9 +86,15 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     | 'estoque'
     | 'relatorios'
     | 'arquivo-morto'
+    | 'avisos'
     | 'unidades'
     | 'equipe'
     | 'configuracoes'
+    | 'painel-dev'
+    | 'saude-firebase'
+    | 'banco-dados'
+    | 'arquivos-storage'
+    | 'eventos-ct'
   >('visao-geral');
 
   // Estado Reativo
@@ -84,6 +110,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   // Estados dos Módulos
   const [buscaAluno, setBuscaAluno] = useState('');
   const [filtroCT, setFiltroCT] = useState(currentCT);
+  const [filtroStatusFin, setFiltroStatusFin] = useState<'todos' | 'em-dia' | 'pendente' | 'bolsista'>('todos');
 
   // Chamada Digital
   const [dataChamada, setDataChamada] = useState(new Date().toISOString().split('T')[0]);
@@ -91,8 +118,11 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [presentesSet, setPresentesSet] = useState<Set<string>>(new Set());
   const [salvandoChamada, setSalvandoChamada] = useState(false);
 
-  // Ficha de Impressão
+  // Ficha de Impressão e Carteirinha
   const [alunoFichaSelecionado, setAlunoFichaSelecionado] = useState<Aluno | null>(null);
+  const [alunoCarteirinhaSelecionado, setAlunoCarteirinhaSelecionado] = useState<Aluno | null>(null);
+  const [modalCurriculoAberto, setModalCurriculoAberto] = useState(false);
+  const [alunoPesoSelecionado, setAlunoPesoSelecionado] = useState<Aluno | null>(null);
 
   // Formulário Financeiro Manual
   const [finDesc, setFinDesc] = useState('');
@@ -100,13 +130,16 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [finValor, setFinValor] = useState('');
   const [finCat, setFinCat] = useState<'Mensalidade' | 'Venda' | 'Equipamento' | 'Aluguel' | 'Geral'>('Mensalidade');
   const [finForma, setFinForma] = useState<'Pix' | 'Dinheiro' | 'Cartão' | 'Outro'>('Pix');
-  const [filtroMesFinanceiro, setFiltroMesFinanceiro] = useState(new Date().toISOString().slice(0, 7));
+
+  // Formulário de Avisos
+  const [novoAvisoTitulo, setNovoAvisoTitulo] = useState('');
+  const [novoAvisoConteudo, setNovoAvisoConteudo] = useState('');
+  const [novoAvisoCT, setNovoAvisoCT] = useState(currentCT);
+  const [novoAvisoUrgente, setNovoAvisoUrgente] = useState(false);
 
   // Formulário de Estoque
   const [novoProdNome, setNovoProdNome] = useState('');
   const [novoProdQtd, setNovoProdQtd] = useState('');
-  const [novoProdValor, setNovoProdValor] = useState('');
-  const [novoProdCat, setNovoProdCat] = useState('Proteção');
 
   // Formulário de Nova Unidade
   const [novaUniNome, setNovaUniNome] = useState('');
@@ -116,34 +149,55 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const [novoProfNome, setNovoProfNome] = useState('');
   const [novoProfEmail, setNovoProfEmail] = useState('');
   const [novoProfCT, setNovoProfCT] = useState('Campo Grande');
-  const [novoProfRole, setNovoProfRole] = useState<'professor' | 'admin'>('professor');
+  const [novoProfRole, setNovoProfRole] = useState<'professor' | 'administrador'>('professor');
 
-  // Login handler
-  const handleLogin = (e: React.FormEvent) => {
+  // Login handler oficial Firebase Auth
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroLogin('');
     setLoadingLogin(true);
 
-    const email = emailLogin.trim().toLowerCase();
-    const profs = store.getProfessores();
-    const prof = profs.find(p => p.email.toLowerCase() === email);
-
-    if (prof) {
-      store.setAdminSession(prof.ct, prof.nome);
-    } else {
-      // Cria sessão como docente / admin para teste
-      const nomeAuto = email.split('@')[0].toUpperCase();
-      store.setAdminSession(ctSelecionadoLogin, nomeAuto);
+    try {
+      const email = emailLogin.trim().toLowerCase();
+      const res = await store.loginComEmail(email, senhaLogin);
+      if (!res.sucesso) {
+        setErroLogin(res.mensagem || 'Credenciais inválidas no Firebase Auth.');
+      } else {
+        const u = store.currentUser;
+        if (u) {
+          store.setAdminSession(u.ct || ctSelecionadoLogin, u.nome, u.role);
+        } else {
+          store.setAdminSession(ctSelecionadoLogin, email.split('@')[0].toUpperCase(), 'administrador');
+        }
+      }
+    } catch (err: any) {
+      setErroLogin(err?.message || 'Falha ao autenticar no Firebase.');
+    } finally {
+      setLoadingLogin(false);
     }
-
-    setLoadingLogin(false);
   };
 
-  const handleQuickLoginAdmin = (ct: string, nome: string) => {
-    store.setAdminSession(ct, nome);
+  const handleLoginGoogleAdmin = async () => {
+    setErroLogin('');
+    setLoadingGoogle(true);
+    try {
+      const res = await store.loginComGoogle();
+      if (!res.sucesso) {
+        setErroLogin(res.mensagem || 'Falha ao autenticar com o Google.');
+      } else {
+        const u = store.currentUser;
+        if (u) {
+          store.setAdminSession(u.ct || 'GERAL', u.nome, u.role);
+        }
+      }
+    } catch (err: any) {
+      setErroLogin(err?.message || 'Erro ao conectar ao Google Authentication.');
+    } finally {
+      setLoadingGoogle(false);
+    }
   };
 
-  // Se NÃO estiver logado: Tela de Login ERP
+  // Se NÃO estiver logado: Tela de Login ERP Oficial
   if (!adminLogado) {
     const unidades = store.getUnidades();
 
@@ -159,12 +213,12 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               GADITAS <span className="text-red-500">ERP DOCENTE</span>
             </h1>
             <p className="text-xs text-neutral-400">
-              Gestão de turmas, chamada digital, finanças e graduações Projarde.
+              Acesso seguro oficial via Firebase Authentication.
             </p>
           </div>
 
           {erroLogin && (
-            <div className="p-3 rounded-xl bg-red-950/60 border border-red-500/60 text-red-300 text-xs flex items-center gap-2">
+            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-500/60 text-red-300 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
               <span>{erroLogin}</span>
             </div>
@@ -180,7 +234,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 required
                 value={emailLogin}
                 onChange={e => setEmailLogin(e.target.value)}
-                placeholder="mestre.daniel@gaditas.com"
+                placeholder="mestre.daniel@gaditas.com ou seu e-mail"
                 className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
               />
             </div>
@@ -220,36 +274,33 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             <button
               type="submit"
               disabled={loadingLogin}
-              className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/60 transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/60 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              {loadingLogin ? 'Validando Credenciais...' : 'Acessar Painel de Controle'}
+              <Lock className="w-4 h-4" />
+              <span>{loadingLogin ? 'Validando no Firebase Auth...' : 'Acessar Painel de Controle'}</span>
             </button>
           </form>
 
-          {/* Atalhos Rápidos para Demonstração */}
-          <div className="pt-4 border-t border-neutral-800 space-y-2">
-            <span className="text-[10px] uppercase font-bold text-neutral-400 block text-center">
-              Acesso Rápido de Teste
-            </span>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLoginAdmin('GERAL', 'Mestre Daniel Braga')}
-                className="p-2.5 rounded-lg bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-left text-xs text-white transition-colors cursor-pointer"
-              >
-                <strong className="block text-red-400 text-[11px]">Mestre Daniel</strong>
-                <span className="text-[10px] text-neutral-400">Admin Geral</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLoginAdmin('Bangu', 'Prof. Lucas Rocha')}
-                className="p-2.5 rounded-lg bg-neutral-950 hover:bg-neutral-800 border border-neutral-800 text-left text-xs text-white transition-colors cursor-pointer"
-              >
-                <strong className="block text-amber-400 text-[11px]">Prof. Lucas</strong>
-                <span className="text-[10px] text-neutral-400">CT Bangu</span>
-              </button>
-            </div>
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-neutral-800"></div>
+            <span className="flex-shrink mx-3 text-[10px] uppercase font-bold text-neutral-500">ou</span>
+            <div className="flex-grow border-t border-neutral-800"></div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleLoginGoogleAdmin}
+            disabled={loadingGoogle}
+            className="w-full py-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            <span>{loadingGoogle ? 'Autenticando...' : 'Entrar com Conta Google'}</span>
+          </button>
 
           <div className="text-center pt-1">
             <button
@@ -272,6 +323,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
   const alunosAtivos = store.getAlunos('ativo', filtroCT === 'GERAL' ? undefined : filtroCT);
   const alunosPendentes = store.getAlunos('pendente', currentCT === 'GERAL' ? undefined : currentCT);
   const alunosInativos = store.getAlunos('inativo', currentCT === 'GERAL' ? undefined : currentCT);
+  const avisos = store.getAvisos(currentCT);
 
   const hoje = new Date();
   const mesAtual = hoje.getMonth();
@@ -299,13 +351,28 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     ? Math.round((alunosAtivos.length / (alunosAtivos.length + alunosInativos.length)) * 100)
     : 100;
 
-  // Filtragem de Lista de Alunos
+  // Filtragem Robusta de Lista de Alunos (Guerreiros Ativos)
   const alunosFiltrados = todosAlunos.filter(a => {
-    const termo = buscaAluno.toLowerCase();
-    const matchTermo = a.nome.toLowerCase().includes(termo) ||
-      a.matricula.toString().includes(termo) ||
-      a.email.toLowerCase().includes(termo);
-    return matchTermo && a.status !== 'inativo';
+    const termo = buscaAluno.toLowerCase().trim();
+    const termoLimpo = termo.replace('#', '');
+    
+    const matchTermo = !termo ||
+      (a.nome || '').toLowerCase().includes(termo) ||
+      (a.matricula ? a.matricula.toString().includes(termoLimpo) : false) ||
+      (a.email || '').toLowerCase().includes(termo) ||
+      (a.telefone || '').includes(termo) ||
+      (a.cpf || '').includes(termo) ||
+      (a.ct || '').toLowerCase().includes(termo);
+    
+    if (a.status === 'inativo') return false;
+
+    const isBolsista = store.isUnidadeBolsista(a.ct);
+    const isPago = isBolsista || (a.ultimo_mes_pago === mesAtual && a.ultimo_ano_pago === anoAtual);
+
+    if (filtroStatusFin === 'em-dia') return matchTermo && isPago && !isBolsista;
+    if (filtroStatusFin === 'pendente') return matchTermo && !isPago && !isBolsista;
+    if (filtroStatusFin === 'bolsista') return matchTermo && isBolsista;
+    return matchTermo;
   });
 
   // Alunos para Chamada Digital
@@ -451,6 +518,16 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               <span>Pasta Digital / Médica</span>
             </button>
 
+            <button
+              onClick={() => setActiveTab('avisos')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'avisos' ? 'bg-red-600 text-white shadow-md' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              }`}
+            >
+              <Bell className="w-4 h-4" />
+              <span>Mural de Avisos</span>
+            </button>
+
             <div className="text-[10px] text-neutral-500 px-3 py-1 font-black pt-3">Gestão & Finanças</div>
             <button
               onClick={() => setActiveTab('financeiro')}
@@ -495,6 +572,58 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
             {isAdminGeral && (
               <>
                 <div className="text-[10px] text-neutral-500 px-3 py-1 font-black pt-3">Administração Geral</div>
+                <button
+                  onClick={() => setActiveTab('painel-dev')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'painel-dev' 
+                      ? 'bg-gradient-to-r from-red-600 via-red-500 to-amber-600 text-white shadow-lg font-black' 
+                      : 'text-amber-400 hover:text-white hover:bg-neutral-900 font-bold'
+                  }`}
+                >
+                  <Code className="w-4 h-4 text-amber-400" />
+                  <span>Painel do Desenvolvedor (CMS)</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('saude-firebase')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'saude-firebase' ? 'bg-red-600 text-white shadow-md' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span>Saúde do Firebase</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('banco-dados')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'banco-dados' ? 'bg-red-600 text-white shadow-md' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <Database className="w-4 h-4 text-red-400" />
+                  <span>Banco & Scanner</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('arquivos-storage')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'arquivos-storage' ? 'bg-red-600 text-white shadow-md' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <UploadCloud className="w-4 h-4 text-amber-400" />
+                  <span>Arquivos Storage</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('eventos-ct')}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                    activeTab === 'eventos-ct' ? 'bg-red-600 text-white shadow-md' : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <CalendarIcon className="w-4 h-4 text-blue-400" />
+                  <span>Eventos & Calendário</span>
+                </button>
+
                 <button
                   onClick={() => setActiveTab('unidades')}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
@@ -543,7 +672,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
           <button
             onClick={onLogout}
-            className="w-full py-2.5 rounded-lg bg-neutral-900 hover:bg-red-950/60 hover:text-red-400 text-neutral-400 text-xs font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2.5 rounded-lg bg-neutral-900 hover:bg-red-950 hover:text-red-400 text-neutral-400 text-xs font-bold uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Sair do Sistema</span>
@@ -553,6 +682,29 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
 
       {/* ÁREA DE CONTEÚDO PRINCIPAL */}
       <main className="flex-1 p-4 sm:p-6 lg:p-10 overflow-y-auto">
+
+        {/* ALERTA DE MODO SUPORTE (IMPERSONAÇÃO) */}
+        {store.isImpersonando() && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-950/90 border border-amber-500/60 text-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+              <div>
+                <strong className="block text-xs uppercase text-white font-black">
+                  MODO SUPORTE ATIVO · Administrador Geral
+                </strong>
+                <span className="text-[11px] text-amber-300">
+                  Visualizando o painel como: <strong>{store.impersonatedUser?.dados?.nome}</strong> ({store.impersonatedUser?.tipo === 'aluno' ? 'Aluno' : store.impersonatedUser?.dados?.role})
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => store.pararImpersonacao()}
+              className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-colors cursor-pointer shadow-md self-start sm:self-auto"
+            >
+              Retornar ao Administrador Geral (Davi)
+            </button>
+          </div>
+        )}
         
         {/* ========================================================
             TAB 1: VISÃO GERAL (DASHBOARD)
@@ -793,7 +945,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
         )}
 
         {/* ========================================================
-            TAB 3: LISTA DE ALUNOS
+            TAB 3: LISTA DE ALUNOS COM WHATSAPP & EXPORTAÇÃO
         ======================================================== */}
         {activeTab === 'lista-alunos' && (
           <div className="space-y-6">
@@ -803,11 +955,20 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   GUERREIROS <span className="text-red-500">ATIVOS</span>
                 </h1>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Gerenciamento de fichas, status de mensalidade e graduação.
+                  Gerenciamento de fichas, carteirinha digital, cobrança WhatsApp e exportação.
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => store.exportarAlunosCSV()}
+                  className="px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold text-xs uppercase tracking-wider transition-colors flex items-center gap-1.5 cursor-pointer"
+                  title="Exportar planilha completa em CSV/Excel"
+                >
+                  <Download className="w-4 h-4 text-emerald-400" />
+                  <span>Exportar CSV</span>
+                </button>
+
                 <button
                   onClick={() => onNavigate('matricula')}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-black font-black text-xs uppercase tracking-wider transition-colors flex items-center gap-2 cursor-pointer"
@@ -818,7 +979,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
               </div>
             </div>
 
-            {/* Barra de Busca e Filtro */}
+            {/* Barra de Busca e Filtros */}
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3.5" />
@@ -830,6 +991,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs focus:border-red-500 focus:outline-none"
                 />
               </div>
+
+              {/* Filtro de Status Financeiro */}
+              <select
+                value={filtroStatusFin}
+                onChange={e => setFiltroStatusFin(e.target.value as any)}
+                className="px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-bold uppercase focus:outline-none cursor-pointer"
+              >
+                <option value="todos">TODAS AS SITUAÇÕES</option>
+                <option value="em-dia">APENAS EM DIA</option>
+                <option value="pendente">APENAS PENDENTES</option>
+                <option value="bolsista">APENAS BOLSISTAS</option>
+              </select>
 
               {isAdminGeral && (
                 <select
@@ -863,7 +1036,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                     {alunosFiltrados.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="p-8 text-center text-neutral-500">
-                          Nenhum atleta encontrado para esta busca.
+                          Nenhum atleta encontrado para esta busca ou filtro.
                         </td>
                       </tr>
                     ) : (
@@ -908,6 +1081,16 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                             </td>
                             <td className="p-4 text-right">
                               <div className="flex items-center justify-end gap-1.5">
+                                {/* Carteirinha Digital */}
+                                <button
+                                  onClick={() => setAlunoCarteirinhaSelecionado(a)}
+                                  className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-amber-400 transition-colors"
+                                  title="Abrir Carteirinha Digital Oficial"
+                                >
+                                  <IdCard className="w-4 h-4" />
+                                </button>
+
+                                {/* Ver Ficha Completa */}
                                 <button
                                   onClick={() => setAlunoFichaSelecionado(a)}
                                   className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors"
@@ -915,20 +1098,34 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
+
+                                {/* Cobrança WhatsApp se pendente */}
                                 {!isPago && !isBolsista && (
-                                  <button
-                                    onClick={async () => {
-                                      if (confirm(`Confirmar baixa de mensalidade para ${a.nome}?`)) {
-                                        await store.darBaixaMensalidade(a.id);
-                                        alert(`Mensalidade de ${a.nome} registrada como PAGA!`);
-                                      }
-                                    }}
-                                    className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase transition-colors"
-                                    title="Dar Baixa no Pagamento"
-                                  >
-                                    Baixa
-                                  </button>
+                                  <>
+                                    <a
+                                      href={store.gerarLinkWhatsAppCobranca(a)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1.5 rounded-lg bg-emerald-950/80 hover:bg-emerald-900 text-emerald-400 border border-emerald-500/40 transition-colors"
+                                      title="Enviar lembrete amigável via WhatsApp com chave PIX"
+                                    >
+                                      <MessageCircle className="w-4 h-4" />
+                                    </a>
+                                    <button
+                                      onClick={async () => {
+                                        if (confirm(`Confirmar baixa de mensalidade para ${a.nome}?`)) {
+                                          await store.darBaixaMensalidade(a.id);
+                                          alert(`Mensalidade de ${a.nome} registrada como PAGA!`);
+                                        }
+                                      }}
+                                      className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-black font-black text-[10px] uppercase transition-colors"
+                                      title="Dar Baixa no Pagamento"
+                                    >
+                                      Baixa
+                                    </button>
+                                  </>
                                 )}
+
                                 <button
                                   onClick={async () => {
                                     if (confirm(`Mover ${a.nome} para o Arquivo Morto?`)) {
@@ -1202,7 +1399,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 </form>
               </div>
 
-              {/* Situação dos Alunos no Mês */}
+              {/* Situação dos Alunos no Mês com Botão WhatsApp */}
               <div className="lg:col-span-7 p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
                 <h3 className="text-sm font-black uppercase text-white tracking-wider flex items-center justify-between">
                   <span>Mensalidades do Mês Atual</span>
@@ -1224,7 +1421,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                           <span className="text-[10px] text-neutral-400">CT {a.ct}</span>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           {isBolsista ? (
                             <span className="text-emerald-400 font-bold uppercase text-[10px]">
                               Bolsista
@@ -1236,9 +1433,16 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                             </span>
                           ) : (
                             <div className="flex items-center gap-2">
-                              <span className="text-amber-400 font-bold uppercase text-[10px]">
-                                Aberto
-                              </span>
+                              <a
+                                href={store.gerarLinkWhatsAppCobranca(a)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 px-2 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold uppercase flex items-center gap-1"
+                                title="Enviar lembrete PIX no WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">WhatsApp</span>
+                              </a>
                               <button
                                 onClick={async () => {
                                   await store.darBaixaMensalidade(a.id);
@@ -1286,17 +1490,27 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
         )}
 
         {/* ========================================================
-            TAB 6: GRADUAÇÕES PROJARDE
+            TAB 6: GRADUAÇÕES PROJARDE & CURRÍCULO
         ======================================================== */}
         {activeTab === 'graduacoes' && (
           <div className="space-y-6">
-            <div className="border-b border-neutral-800 pb-4">
-              <h1 className="text-2xl font-black uppercase text-white">
-                GRADUAÇÃO <span className="text-red-500">PROJARDE</span>
-              </h1>
-              <p className="text-xs text-neutral-400 mt-1">
-                Clique nos 4 graus (pontas) para alterar o grau ou selecione a nova faixa do guerreiro.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+              <div>
+                <h1 className="text-2xl font-black uppercase text-white">
+                  GRADUAÇÃO <span className="text-red-500">PROJARDE</span>
+                </h1>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Clique nos 4 graus (pontas) para alterar o grau ou selecione a nova faixa do guerreiro.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setModalCurriculoAberto(true)}
+                className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-xs uppercase flex items-center gap-2 cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Ver Grade Curricular Projarde</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1361,7 +1575,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
         )}
 
         {/* ========================================================
-            TAB 7: PASTA DIGITAL & FICHA MÉDICA
+            TAB 7: PASTA DIGITAL & FICHAS MÉDICAS COM CARTEIRINHA
         ======================================================== */}
         {activeTab === 'documentos' && (
           <div className="space-y-6">
@@ -1370,7 +1584,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                 PASTA DIGITAL & <span className="text-red-500">FICHAS MÉDICAS</span>
               </h1>
               <p className="text-xs text-neutral-400 mt-1">
-                Consulta rápida de prontuário, alergias, contatos de emergência e emissão para competições.
+                Consulta de prontuário, peso para lutas, emissão de carteirinhas e fichas de pesagem.
               </p>
             </div>
 
@@ -1393,6 +1607,19 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                   </div>
 
                   <div className="space-y-2 text-xs">
+                    <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800 flex justify-between items-center">
+                      <div>
+                        <span className="text-neutral-400 block text-[10px] uppercase font-bold">Peso / Categoria</span>
+                        <span className="text-white font-mono font-bold">{aluno.peso_kg || 70} kg</span>
+                      </div>
+                      <button
+                        onClick={() => setAlunoPesoSelecionado(aluno)}
+                        className="text-[10px] uppercase font-bold text-amber-400 hover:underline"
+                      >
+                        Calcular Categoria
+                      </button>
+                    </div>
+
                     <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800">
                       <span className="text-neutral-400 block text-[10px] uppercase font-bold">Alergias</span>
                       <span className="text-white">{aluno.alergias || 'Nenhuma'}</span>
@@ -1411,15 +1638,173 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setAlunoFichaSelecionado(aluno)}
-                    className="w-full py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Visualizar / Imprimir Ficha</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => setAlunoCarteirinhaSelecionado(aluno)}
+                      className="py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 font-bold text-[11px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <IdCard className="w-3.5 h-3.5" />
+                      <span>Carteirinha</span>
+                    </button>
+
+                    <button
+                      onClick={() => setAlunoFichaSelecionado(aluno)}
+                      className="py-2.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-[11px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Printer className="w-3.5 h-3.5 text-red-400" />
+                      <span>Ficha Médica</span>
+                    </button>
+                  </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            TAB: MURAL DE AVISOS DO CT
+        ======================================================== */}
+        {activeTab === 'avisos' && (
+          <div className="space-y-8">
+            <div className="border-b border-neutral-800 pb-4">
+              <h1 className="text-2xl font-black uppercase text-white">
+                MURAL DE <span className="text-red-500">AVISOS</span>
+              </h1>
+              <p className="text-xs text-neutral-400 mt-1">
+                Publique comunicados para os atletas visualizarem na Área do Aluno.
+              </p>
+            </div>
+
+            {/* Form de Publicar Aviso */}
+            <div className="p-6 rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
+              <h3 className="text-xs font-black uppercase tracking-wider text-red-400">
+                Publicar Novo Comunicado
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <input
+                    type="text"
+                    value={novoAvisoTitulo}
+                    onChange={e => setNovoAvisoTitulo(e.target.value)}
+                    placeholder="Título do aviso (Ex: Exame de Faixa, Seminário, Horário Especial...)"
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white text-sm"
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    rows={3}
+                    value={novoAvisoConteudo}
+                    onChange={e => setNovoAvisoConteudo(e.target.value)}
+                    placeholder="Conteúdo detalhado do comunicado para os guerreiros..."
+                    className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white text-xs resize-none"
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+                  <div className="flex items-center gap-4">
+                    <select
+                      value={novoAvisoCT}
+                      onChange={e => setNovoAvisoCT(e.target.value)}
+                      className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-bold uppercase"
+                    >
+                      <option value="GERAL">TODOS OS POLOS (GERAL)</option>
+                      {unidades.map(u => (
+                        <option key={u.id} value={u.nome}>Polo {u.nome}</option>
+                      ))}
+                    </select>
+
+                    <label className="flex items-center gap-2 cursor-pointer text-neutral-300">
+                      <input
+                        type="checkbox"
+                        checked={novoAvisoUrgente}
+                        onChange={e => setNovoAvisoUrgente(e.target.checked)}
+                        className="rounded border-neutral-700 bg-neutral-950 text-red-600"
+                      />
+                      <span className="font-bold text-red-400 uppercase text-[11px]">Marcar como Urgente</span>
+                    </label>
+                  </div>
+
+                  <button
+                    onClick={async () => {
+                      if (!novoAvisoTitulo.trim() || !novoAvisoConteudo.trim()) {
+                        alert('Preencha o título e o conteúdo do aviso.');
+                        return;
+                      }
+                      await store.adicionarAviso({
+                        titulo: novoAvisoTitulo.trim(),
+                        conteudo: novoAvisoConteudo.trim(),
+                        autor: adminLogado.nome,
+                        ct: novoAvisoCT,
+                        urgente: novoAvisoUrgente
+                      });
+                      setNovoAvisoTitulo('');
+                      setNovoAvisoConteudo('');
+                      setNovoAvisoUrgente(false);
+                      alert('Aviso publicado no mural dos alunos!');
+                    }}
+                    className="px-6 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider cursor-pointer"
+                  >
+                    Publicar Comunicado
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Lista de Avisos Publicados */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-black uppercase text-white tracking-wider">
+                Avisos Ativos no Sistema
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {avisos.map(aviso => (
+                  <div
+                    key={aviso.id}
+                    className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-3"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-bold text-amber-400">
+                            Polo: {aviso.ct}
+                          </span>
+                          {aviso.urgente && (
+                            <span className="px-1.5 py-0.5 rounded bg-red-600 text-white font-black text-[9px] uppercase">
+                              Urgente
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="text-base font-black uppercase text-white mt-0.5">
+                          {aviso.titulo}
+                        </h4>
+                      </div>
+
+                      <button
+                        onClick={async () => {
+                          if (confirm('Excluir este aviso?')) {
+                            await store.removerAviso(aviso.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg bg-neutral-950 hover:bg-red-950 text-neutral-400 hover:text-red-400"
+                        title="Remover aviso"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-neutral-300 leading-relaxed">
+                      {aviso.conteudo}
+                    </p>
+
+                    <div className="pt-2 border-t border-neutral-800 text-[10px] text-neutral-400 flex justify-between">
+                      <span>Autor: {aviso.autor}</span>
+                      <span>{aviso.data}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1835,7 +2220,7 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
                     </span>
                   </div>
 
-                  {p.role !== 'admin' && (
+                  {p.role !== 'administrador_geral' && p.role !== 'administrador' && (
                     <button
                       onClick={async () => {
                         if (confirm(`Remover acesso de ${p.nome}?`)) {
@@ -1907,13 +2292,54 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
           </div>
         )}
 
+        {/* TAB: PAINEL DO DESENVOLVEDOR (CMS) */}
+        {activeTab === 'painel-dev' && <DeveloperCmsPanel />}
+
+        {/* TAB 13: SAÚDE DO FIREBASE */}
+        {activeTab === 'saude-firebase' && <FirebaseHealthView />}
+
+        {/* TAB 14: GERENCIAMENTO DE BANCO DE DADOS & SCANNER FIREBASE */}
+        {activeTab === 'banco-dados' && <FirebaseDatabasePanel />}
+
+        {/* TAB 15: CENTRAL DE ARQUIVOS & FIREBASE STORAGE */}
+        {activeTab === 'arquivos-storage' && <FirebaseStorageManager />}
+
+        {/* TAB 16: GESTÃO DE EVENTOS, CAMPEONATOS E GRADUAÇÕES */}
+        {activeTab === 'eventos-ct' && <EventosManager />}
+
       </main>
 
-      {/* MODAL DE IMPRESSÃO DA FICHA */}
+      {/* MODAIS DO ERP */}
       {alunoFichaSelecionado && (
         <PrintableAthleteCard
           aluno={alunoFichaSelecionado}
           onClose={() => setAlunoFichaSelecionado(null)}
+        />
+      )}
+
+      {alunoCarteirinhaSelecionado && (
+        <AthleteCardID
+          aluno={alunoCarteirinhaSelecionado}
+          onClose={() => setAlunoCarteirinhaSelecionado(null)}
+        />
+      )}
+
+      {modalCurriculoAberto && (
+        <BeltProgressionModal
+          onClose={() => setModalCurriculoAberto(false)}
+        />
+      )}
+
+      {alunoPesoSelecionado && (
+        <WeightCategoryCalculator
+          initialWeight={alunoPesoSelecionado.peso_kg || 70}
+          initialHeight={alunoPesoSelecionado.altura_cm || 175}
+          onSave={async (p, a) => {
+            await store.atualizarMedidas(alunoPesoSelecionado.id, p, a);
+            alert(`Medidas de ${alunoPesoSelecionado.nome} atualizadas!`);
+            setAlunoPesoSelecionado(null);
+          }}
+          onClose={() => setAlunoPesoSelecionado(null)}
         />
       )}
 

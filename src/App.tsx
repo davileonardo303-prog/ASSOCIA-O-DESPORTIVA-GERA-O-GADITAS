@@ -8,6 +8,7 @@ import { GalleryView } from './views/GalleryView';
 import { EnrollmentView } from './views/EnrollmentView';
 import { StudentPortalView } from './views/StudentPortalView';
 import { AdminPortalView } from './views/AdminPortalView';
+import { FirebaseHealthView } from './components/FirebaseHealthView';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('home');
@@ -76,6 +77,19 @@ export default function App() {
             onLogout={handleLogoutAdmin}
             onNavigate={handleNavigate}
           />
+        )}
+        {currentView === 'saude-firebase' && (
+          <div className="max-w-6xl mx-auto px-4 py-12">
+            <div className="mb-6 flex items-center justify-between">
+              <button
+                onClick={() => handleNavigate('home')}
+                className="text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+              >
+                ← Voltar para o Início
+              </button>
+            </div>
+            <FirebaseHealthView />
+          </div>
         )}
       </div>
 

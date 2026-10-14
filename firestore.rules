@@ -1,0 +1,99 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isUserEmail(email) {
+      return isSignedIn() && request.auth.token.email.lower() == email.lower();
+    }
+
+    function isSuperAdmin() {
+      return isUserEmail('davileonardo303@gmail.com');
+    }
+
+    // Coleção Alunos (Guerreiros) - Leitura aberta para busca, carteirinhas e chamadas; escrita permitida para matrículas e admins
+    match /alunos/{alunoId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // Coleção Usuários do Sistema & Perfis Administrativos
+    match /usuarios/{userId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    // Coleções Específicas de Papéis
+    match /professores/{profId} {
+      allow read, write: if true;
+    }
+    match /administradores/{adminId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Unidades (CTs)
+    match /unidades/{uniId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Frequência (Chamada Digital)
+    match /frequencia/{freqId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Financeiro & Mensalidades
+    match /financeiro/{finId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Estoque & Materiais
+    match /estoque/{estId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Eventos & Campeonatos
+    match /eventos/{eventoId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Avisos do CT
+    match /avisos/{avisoId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Arquivos (Metadados do Storage)
+    match /arquivos/{arquivoId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Auditoria & Logs de Acesso
+    match /auditoria/{logId} {
+      allow read, write: if true;
+    }
+
+    // Coleções do CMS: Configurações Globais, Páginas Customizadas e Menus
+    match /configuracoes/{configId} {
+      allow read, write: if true;
+    }
+    match /paginas/{pageId} {
+      allow read, write: if true;
+    }
+    match /menus/{menuId} {
+      allow read, write: if true;
+    }
+
+    // Coleção Test de Conexão
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // Fallback padrão
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

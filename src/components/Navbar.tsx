@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Shield, Menu, X, User, Lock, Award, ArrowRight } from 'lucide-react';
+import { Shield, Menu, X, User, Lock, Award, ArrowRight, Bell } from 'lucide-react';
 import { Aluno } from '../types';
+import { store } from '../services/store';
 
 interface NavbarProps {
   currentView: string;
@@ -20,6 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogoutAluno
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const siteConfig = store.getSiteConfig();
 
   const handleNav = (view: string) => {
     onNavigate(view);
@@ -27,7 +29,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#070708]/90 backdrop-blur-md border-b border-neutral-800">
+    <>
+      {siteConfig.notificacoesAtivas && siteConfig.notificacaoTexto && (
+        <div className="bg-gradient-to-r from-red-700 via-amber-600 to-red-700 text-white text-[11px] font-black uppercase tracking-wider py-1.5 px-4 text-center shadow-md flex items-center justify-center gap-2">
+          <Bell className="w-3.5 h-3.5 text-amber-200 animate-bounce" />
+          <span>{siteConfig.notificacaoTexto}</span>
+        </div>
+      )}
+      <header className="sticky top-0 z-50 bg-[#070708]/90 backdrop-blur-md border-b border-neutral-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
         
         {/* Zone 1: Brand Wordmark */}
@@ -89,6 +98,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             Matrícula Online
+          </button>
+          <button
+            onClick={() => handleNav('saude-firebase')}
+            className={`transition-colors py-1 border-b-2 flex items-center gap-1.5 ${
+              currentView === 'saude-firebase'
+                ? 'text-emerald-400 border-emerald-500'
+                : 'border-transparent text-neutral-400 hover:text-emerald-400'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Saúde Firebase</span>
           </button>
         </nav>
 
@@ -217,6 +237,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               Matrícula
+            </button>
+            <button
+              onClick={() => handleNav('saude-firebase')}
+              className={`p-3 text-left rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${
+                currentView === 'saude-firebase' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/40' : 'bg-neutral-900 text-neutral-300'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Saúde do Firebase</span>
             </button>
           </div>
 

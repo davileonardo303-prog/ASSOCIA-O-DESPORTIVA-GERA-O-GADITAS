@@ -104,15 +104,19 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Linha Inferior */}
         <div className="border-t border-neutral-800/80 mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400">
           <p>© {new Date().getFullYear()} Equipe Gaditas Fight Team. Todos os direitos reservados.</p>
-          <div className="flex gap-6">
-            <button onClick={() => onNavigate('matricula')} className="hover:text-white transition-colors">
+          <div className="flex flex-wrap gap-4 sm:gap-6 items-center">
+            <button onClick={() => onNavigate('matricula')} className="hover:text-white transition-colors cursor-pointer">
               Matrícula
             </button>
-            <button onClick={() => onNavigate('aluno-portal')} className="hover:text-white transition-colors">
+            <button onClick={() => onNavigate('aluno-portal')} className="hover:text-white transition-colors cursor-pointer">
               Área do Aluno
             </button>
-            <button onClick={() => onNavigate('admin-portal')} className="hover:text-white transition-colors">
+            <button onClick={() => onNavigate('admin-portal')} className="hover:text-white transition-colors cursor-pointer">
               Acesso Docente
+            </button>
+            <button onClick={() => onNavigate('saude-firebase')} className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 cursor-pointer text-emerald-400/90 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Saúde do Firebase</span>
             </button>
           </div>
         </div>

@@ -81,8 +81,8 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
       }
 
       setMatriculaCriada(novo);
-    } catch {
-      setErroMsg('Erro ao registrar matrícula. Tente novamente.');
+    } catch (err: any) {
+      setErroMsg(err?.message || 'Erro ao registrar matrícula. Tente novamente.');
     } finally {
       setLoading(false);
     }
