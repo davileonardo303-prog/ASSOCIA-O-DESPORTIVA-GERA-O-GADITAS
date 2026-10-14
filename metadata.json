@@ -1,0 +1,6 @@
+{
+  "name": "Equipe Gaditas - CT de Elite & Sistema de Gestão",
+  "description": "Plataforma oficial da Equipe Gaditas Fight Team (Mestre Daniel Braga): Portal do Aluno, Graduação Projarde, Chamada Digital, Gestão de CTs e Financeiro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

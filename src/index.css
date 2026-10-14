@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --primary: #cc0000;
+    --primary-glow: rgba(204, 0, 0, 0.5);
+    --gold: #f59e0b;
+    --gold-glow: rgba(245, 158, 11, 0.4);
+    --dark-bg: #070708;
+    --card-bg: #121215;
+    --border-subtle: #23232a;
+  }
+
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: var(--dark-bg);
+    color: #ffffff;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Projarde Belt Real Gradients */
+.proj-amarela { background-color: #facc15; }
+.proj-amarela-e-branca { background: linear-gradient(to bottom, #facc15 50%, #ffffff 50%); }
+.proj-verde { background-color: #16a34a; }
+.proj-verde-e-branca { background: linear-gradient(to bottom, #16a34a 50%, #ffffff 50%); }
+.proj-azul { background-color: #2563eb; }
+.proj-azul-e-branca { background: linear-gradient(to bottom, #2563eb 50%, #ffffff 50%); }
+.proj-marrom { background-color: #78350f; }
+.proj-marrom-e-branca { background: linear-gradient(to bottom, #78350f 50%, #ffffff 50%); }
+.proj-vermelha { background-color: #dc2626; }
+.proj-vermelha-e-branca { background: linear-gradient(to bottom, #dc2626 50%, #ffffff 50%); }
+.proj-vermelho-e-amarelo { background: linear-gradient(to bottom, #dc2626 50%, #facc15 50%); }
+.proj-preta { background-color: #09090b; }
+.proj-preta-e-branca { background: linear-gradient(to bottom, #09090b 50%, #ffffff 50%); }
+
+/* Print styling for competition accreditation sheets */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .card-print {
+    border: 2px solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+}
