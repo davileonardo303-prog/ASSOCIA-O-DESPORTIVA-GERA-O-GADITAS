@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Edit3, Check, X, Upload, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
-import { comprimirImagemParaWebP } from '../services/store';
+import { Edit3, Check, X, Upload, Image as ImageIcon, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { store, comprimirImagemParaWebP } from '../services/store';
 
 interface EditableTextProps {
   value: string;
@@ -124,21 +124,27 @@ export const EditableImage: React.FC<EditableImageProps> = ({
   const [modalAberta, setModalAberta] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [arrastando, setArrastando] = useState(false);
+  const [salvandoStorage, setSalvandoStorage] = useState(false);
+  const [progressoStorage, setProgressoStorage] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processarArquivo = async (file: File) => {
     try {
+      setSalvandoStorage(true);
+      setProgressoStorage(25);
       const blob = await comprimirImagemParaWebP(file, 1600, 1600, 0.85);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          onChange(reader.result);
-          setModalAberta(false);
-        }
-      };
-      reader.readAsDataURL(blob);
+      setProgressoStorage(45);
+      const urlFinal = await store.uploadFotoSiteParaStorage(blob, 'fotos_site/inline', (pct) => {
+        setProgressoStorage(Math.max(45, pct));
+      });
+      setProgressoStorage(100);
+      onChange(urlFinal);
+      setModalAberta(false);
     } catch (e: any) {
-      alert(e?.message || 'Falha ao processar imagem.');
+      alert(e?.message || 'Falha ao processar imagem para o Firebase Storage.');
+    } finally {
+      setSalvandoStorage(false);
+      setProgressoStorage(0);
     }
   };
 
@@ -235,6 +241,21 @@ export const EditableImage: React.FC<EditableImageProps> = ({
                   <span>Escolher arquivo de imagem</span>
                 </button>
               </div>
+
+              {salvandoStorage && (
+                <div className="space-y-1.5 bg-neutral-900 p-3 rounded-xl border border-neutral-800">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-400">
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Enviando para o Firebase Storage...</span>
+                    </span>
+                    <span>{progressoStorage}%</span>
+                  </div>
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-gradient-to-r from-red-600 to-amber-500 h-full transition-all" style={{ width: `${progressoStorage}%` }} />
+                  </div>
+                </div>
+              )}
 
               <div className="relative flex items-center justify-center my-2">
                 <span className="h-px bg-neutral-800 w-full" />

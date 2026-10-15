@@ -54,8 +54,12 @@ import {
   Calendar as CalendarIcon,
   Activity,
   Code,
-  Cloud
+  Cloud,
+  Camera,
+  Sparkles
 } from 'lucide-react';
+import { GooglePreCadastroModal } from '../components/GooglePreCadastroModal';
+import { GerenciadorFotosModal } from '../components/GerenciadorFotosModal';
 
 interface AdminPortalViewProps {
   adminLogado: { ct: string; nome: string; isAdmin: boolean; role?: string } | null;
@@ -98,7 +102,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     | 'backup-drive'
     | 'arquivos-storage'
     | 'eventos-ct'
+    | 'gerenciar-fotos'
   >('visao-geral');
+
+  // Estados de Modais
+  const [modalFotosAberta, setModalFotosAberta] = useState(false);
+  const [dadosGooglePendente, setDadosGooglePendente] = useState<{
+    nome: string;
+    email: string;
+    uid?: string;
+    foto?: string;
+  } | null>(null);
+  const [modalGoogleAberta, setModalGoogleAberta] = useState(false);
 
   // Estado Reativo
   const [, setTick] = useState(0);
@@ -190,8 +205,18 @@ export const AdminPortalView: React.FC<AdminPortalViewProps> = ({
     setLoadingGoogle(true);
     try {
       const res = await store.loginComGoogle();
+      if (res.novoUsuarioPendente && res.dadosGoogle) {
+        setDadosGooglePendente(res.dadosGoogle);
+        setModalGoogleAberta(true);
+        return;
+      }
       if (!res.sucesso) {
-        setErroLogin(res.mensagem || 'Falha ao autenticar com o Google.');
+        if (res.erroDominio) {
+          setDadosGooglePendente({ nome: '', email: '' });
+          setModalGoogleAberta(true);
+        } else {
+          setErroLogin(res.mensagem || 'Falha ao autenticar com o Google.');
+        }
       } else {
         const u = store.currentUser;
         if (u) {

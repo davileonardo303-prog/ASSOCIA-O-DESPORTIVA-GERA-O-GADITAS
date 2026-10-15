@@ -71,6 +71,7 @@ export interface Unidade {
   endereco?: string;
   responsavel?: string;
   telefone?: string;
+  fotoUrl?: string;
 }
 
 export interface FrequenciaRecord {
@@ -250,6 +251,8 @@ export interface HomeScreenConfig {
   heroImagemUrl?: string;
   modalidade1FotoUrl?: string;
   modalidade2FotoUrl?: string;
+  modalidade3FotoUrl?: string;
+  ctaBannerFotoUrl?: string;
 }
 
 export interface SobreScreenConfig {

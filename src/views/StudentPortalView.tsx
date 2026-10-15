@@ -21,9 +21,11 @@ import {
   Scale,
   Bell,
   BookOpen,
-  Upload,
-  FileCheck
+  FileCheck,
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
+import { GooglePreCadastroModal } from '../components/GooglePreCadastroModal';
 
 interface StudentPortalViewProps {
   alunoLogado: Aluno | null;
@@ -42,6 +44,16 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [pixCopiado, setPixCopiado] = useState(false);
+  
+  // Estados de Conexão com Conta Google e Pré-Cadastro
+  const [dadosGooglePendente, setDadosGooglePendente] = useState<{
+    nome: string;
+    email: string;
+    uid?: string;
+    foto?: string;
+  } | null>(null);
+  const [modalGoogleAberta, setModalGoogleAberta] = useState(false);
+  const [mostrarAjudaCredenciais, setMostrarAjudaCredenciais] = useState(false);
   
   // Modais do Aluno
   const [modalFichaAberta, setModalFichaAberta] = useState(false);
@@ -88,8 +100,22 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
     setLoadingGoogle(true);
     try {
       const res = await store.loginComGoogle();
+      if (res.novoUsuarioPendente && res.dadosGoogle) {
+        setDadosGooglePendente(res.dadosGoogle);
+        setModalGoogleAberta(true);
+        return;
+      }
       if (!res.sucesso) {
-        setErroLogin(res.mensagem || 'Falha ao autenticar com o Google.');
+        if (res.erroDominio) {
+          // Permite ao usuário prosseguir preenchendo as informações complementares com Google
+          setDadosGooglePendente({
+            nome: '',
+            email: ''
+          });
+          setModalGoogleAberta(true);
+        } else {
+          setErroLogin(res.mensagem || 'Falha ao autenticar com o Google.');
+        }
       }
     } catch (err: any) {
       setErroLogin(err?.message || 'Erro ao conectar ao Google Authentication.');
@@ -150,7 +176,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
               <User className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-black uppercase text-white">
-              PORTAL DO <span className="text-red-500">ALUNO</span>
+              ÁREA DO <span className="text-red-500">GUERREIRO</span>
             </h1>
             <p className="text-xs text-neutral-400">
               Acesso seguro oficial via Firebase Authentication.
@@ -199,7 +225,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
               className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-950/60 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Lock className="w-4 h-4" />
-              <span>{loading ? 'Autenticando no Firebase...' : 'Entrar no Portal do Aluno'}</span>
+              <span>{loading ? 'Autenticando no Firebase...' : 'Acessar Conta do Guerreiro'}</span>
             </button>
           </form>
 
@@ -213,7 +239,7 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
             type="button"
             onClick={handleLoginGoogle}
             disabled={loadingGoogle}
-            className="w-full py-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3 rounded-xl bg-neutral-950 hover:bg-neutral-800 border border-neutral-700 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -221,10 +247,44 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
             </svg>
-            <span>{loadingGoogle ? 'Conectando ao Google...' : 'Entrar com Conta Google'}</span>
+            <span>{loadingGoogle ? 'Conectando ao Google...' : 'Entrar / Conectar com Conta Google'}</span>
           </button>
 
-          <div className="text-center pt-2">
+          {/* Dica / Auxílio de Acesso Rápido */}
+          <div className="pt-2 border-t border-neutral-800/80">
+            <button
+              type="button"
+              onClick={() => setMostrarAjudaCredenciais(!mostrarAjudaCredenciais)}
+              className="w-full text-center text-[11px] text-neutral-400 hover:text-amber-400 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>Precisa de ajuda ou deseja testar com credenciais?</span>
+            </button>
+
+            {mostrarAjudaCredenciais && (
+              <div className="mt-2 p-3 bg-neutral-950/80 rounded-xl border border-neutral-800 text-[11px] text-neutral-300 space-y-2">
+                <p className="text-amber-400 font-bold">Credenciais para Teste do Aluno:</p>
+                <div className="flex items-center justify-between bg-neutral-900 p-2 rounded-lg font-mono text-[10px]">
+                  <span>Matrícula: <strong>1001</strong> (ou aluno@gaditas.com)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmailInput('1001');
+                      setSenhaInput('gaditas123');
+                    }}
+                    className="text-red-400 hover:text-red-300 uppercase font-black cursor-pointer"
+                  >
+                    Preencher
+                  </button>
+                </div>
+                <p className="text-[10px] text-neutral-400">
+                  * Novo aluno conectando via Google: preencha as informações complementares e aguarde a aprovação do Mestre Daniel Braga.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="text-center pt-1">
             <button
               type="button"
               onClick={() => onNavigate('matricula')}
@@ -235,6 +295,13 @@ export const StudentPortalView: React.FC<StudentPortalViewProps> = ({
           </div>
 
         </div>
+
+        {/* Modal de Pré-Cadastro Obrigatório para novos usuários do Google */}
+        <GooglePreCadastroModal
+          isOpen={modalGoogleAberta}
+          onClose={() => setModalGoogleAberta(false)}
+          dadosGoogle={dadosGooglePendente}
+        />
       </div>
     );
   }

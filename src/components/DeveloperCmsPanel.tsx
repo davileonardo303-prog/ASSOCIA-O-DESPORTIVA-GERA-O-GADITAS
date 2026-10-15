@@ -1138,13 +1138,13 @@ export const DeveloperCmsPanel: React.FC = () => {
               )}
 
               {/* ====================================================== */}
-              {/* ABA 4: PORTAL DO ALUNO                                 */}
+              {/* ABA 4: ÁREA DO GUERREIRO / ALUNO                       */}
               {/* ====================================================== */}
               {activeEditorTab === 'aluno' && (
                 <div className="space-y-6">
                   <div className="border-b border-neutral-800 pb-3">
                     <h2 className="text-lg font-black uppercase text-white flex items-center gap-2">
-                      <span>Configurações do Portal do Aluno</span>
+                      <span>Configurações da Área do Guerreiro / Aluno</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-950 text-red-400 border border-red-500/30">Área Restrita</span>
                     </h2>
                     <p className="text-xs text-neutral-400 mt-1">
@@ -1154,7 +1154,7 @@ export const DeveloperCmsPanel: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="text-xs font-black uppercase text-neutral-200">
-                      Título do Portal do Aluno
+                      Título da Área do Guerreiro / Aluno
                     </label>
                     <input
                       type="text"
@@ -1168,7 +1168,7 @@ export const DeveloperCmsPanel: React.FC = () => {
 
                   <div className="space-y-1">
                     <label className="text-xs font-black uppercase text-neutral-200">
-                      Aviso Global no Topo do Portal do Aluno
+                      Aviso Global no Topo da Área do Guerreiro
                     </label>
                     <p className="text-[11px] text-neutral-400">
                       Aparece com destaque em vermelho para todos os alunos logados avisando sobre eventos ou graduações.
@@ -2157,7 +2157,7 @@ export const DeveloperCmsPanel: React.FC = () => {
                 )}
 
                 {/* ==================================================== */}
-                {/* PREVIEW DO PORTAL DO ALUNO                           */}
+                {/* PREVIEW DA ÁREA DO GUERREIRO                         */}
                 {/* ==================================================== */}
                 {previewScreen === 'aluno' && (
                   <div className="space-y-6">

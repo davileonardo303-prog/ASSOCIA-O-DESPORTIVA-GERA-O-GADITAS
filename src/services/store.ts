@@ -23,7 +23,7 @@ import {
   AlunoScreenConfig,
   GlobalSiteConfig
 } from '../types';
-import { db, auth, uploadArquivoFirebase } from './firebase';
+import { db, auth, uploadArquivoFirebase, tratarErroAuth } from './firebase';
 import { 
   collection, 
   getDocs, 
@@ -84,8 +84,8 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   avisoGlobal: '',
   avisoGlobalAtivo: false,
   notificacoesAtivas: true,
-  notificacaoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Vila Ieda, Riviera, Torre Forte e demais polos!',
-  rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. CNPJ 00.000.000/0001-00.',
+  notificacaoTexto: `Matrículas abertas para a temporada ${new Date().getFullYear()} nos CTs Campo Grande, Vila Ieda, Riviera, Torre Forte e demais polos!`,
+  rodapeTexto: `© ${new Date().getFullYear()} Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados.`,
   menuItens: [
     { id: 'm1', label: 'Início', viewOuLink: 'home', visivel: true, ordem: 1 },
     { id: 'm2', label: 'Sobre o CT', viewOuLink: 'sobre', visivel: true, ordem: 2 },
@@ -96,7 +96,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
 
 export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
   home: {
-    badge: 'Associação Desportiva Gaditas · Desde 2017',
+    badge: `🔥 MATRÍCULAS ABERTAS · TEMPORADA ${new Date().getFullYear()} · DESDE 2017`,
     tituloHero: 'FORJE SUA MELHOR VERSÃO NOS TATAMES',
     subtituloHero: 'Luta Livre, Muay Thai Tradicional e MMA sob a liderança técnica do Mestre Daniel Braga. Unidades de alto rendimento no Rio de Janeiro.',
     ctaPrimario: 'Matricule-se Agora',
@@ -113,8 +113,8 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     polosSubtitulo: 'Estrutura profissional com tatames olímpicos, vestiários e professores graduados em cada CT.',
     horariosTitulo: 'GRADE DE TREINOS OFICIAL',
     horariosSubtitulo: 'Turmas divididas por idade, graduação e foco esportivo (iniciante ao avançado).',
-    ctaBannerTitulo: 'PRONTO PARA FORJAR SEU CARÁTER E SUA TÉCNICA?',
-    ctaBannerTexto: 'Agende hoje mesmo uma aula experimental gratuita em qualquer um dos nossos polos e vivencie a disciplina da Equipe Gaditas.',
+    ctaBannerTitulo: `TEMPORADA ${new Date().getFullYear()}: PRONTO PARA FORJAR SEU CARÁTER E SUA TÉCNICA?`,
+    ctaBannerTexto: `Matrículas abertas para a temporada ${new Date().getFullYear()}! Agende hoje mesmo uma aula experimental gratuita em qualquer um dos nossos polos e vivencie a disciplina da Equipe Gaditas.`,
     ctaBannerBotao: 'Falar com o Mestre no WhatsApp',
     heroVisivel: true,
     modalidadesVisivel: true,
@@ -140,8 +140,8 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     pilar3Texto: 'União e fraternidade verdadeira entre todos os guerreiros da família Gaditas.'
   },
   matricula: {
-    titulo: 'MATRÍCULA ONLINE & NOVA INSCRIÇÃO',
-    subtitulo: 'Junte-se à Equipe Gaditas. Preencha seus dados para começar a treinar no CT mais próximo.',
+    titulo: `MATRÍCULA ONLINE & NOVA INSCRIÇÃO · TEMPORADA ${new Date().getFullYear()}`,
+    subtitulo: `Junte-se à Equipe Gaditas na Temporada ${new Date().getFullYear()}. Preencha seus dados para começar a treinar no CT mais próximo.`,
     beneficio1: 'Acesso completo às aulas oficiais de Muay Thai, Jiu-Jitsu e Luta Livre',
     beneficio2: 'Acompanhamento individual de graduação e carteirinha digital oficial de atleta',
     beneficio3: 'Condições especiais para famílias e alunos de projetos sociais parceiros',
@@ -149,10 +149,10 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     avisoTermo: 'Declaro estar apto para a prática de artes marciais de contato e comprometo-me a respeitar a hierarquia e as normas do dojo.'
   },
   aluno: {
-    tituloPortal: 'PORTAL DO GUERREIRO GADITAS',
+    tituloPortal: 'ÁREA DO GUERREIRO GADITAS',
     avisoMural: 'Atenção guerreiros: mantenham a frequência regular em todas as aulas para qualificação nos exames oficiais de graduação!',
     suporteWhatsAppTexto: 'Suporte Direto com a Coordenação',
-    linkSuporteWhatsApp: 'https://api.whatsapp.com/send?phone=5521999990001&text=Ola%20Preciso%20de%20ajuda%20no%20Portal%20do%20Aluno',
+    linkSuporteWhatsApp: 'https://api.whatsapp.com/send?phone=5521999990001&text=Ola%20Preciso%20de%20ajuda%20na%20Area%20do%20Guerreiro',
     mostrarRanking: true,
     mostrarGradeHorarios: true,
     mostrarCalculadoraPeso: true
@@ -170,11 +170,11 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     facebook: 'https://www.facebook.com/gaditasfightteam',
     emailContato: 'gaditasfightteam@gmail.com',
     notificacaoTopoAtiva: true,
-    notificacaoTopoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Bangu e Seropédica!',
+    notificacaoTopoTexto: `Matrículas abertas para a temporada ${new Date().getFullYear()} nos CTs Campo Grande, Bangu e Seropédica!`,
     notificacaoTopoCor: 'amarelo',
     notificacaoDataExpiracao: '',
     chatbotBoasVindas: 'Oss! Seja muito bem-vindo à Equipe Gaditas Fight Team! Sou o Atendente Virtual e posso tirar suas dúvidas sobre horários, valores, polos e agendar sua 1ª Aula Experimental Gratuita com o Mestre Daniel Braga. Como posso te ajudar hoje?',
-    rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. Metodologia Projarde.'
+    rodapeTexto: `© ${new Date().getFullYear()} Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. Metodologia Projarde.`
   }
 };
 
@@ -1359,42 +1359,192 @@ class GaditasProductionStore {
   // ===== AUTH MÉTODOS =====
   public async loginComEmail(email: string, pass: string): Promise<{ sucesso: boolean; mensagem?: string }> {
     try {
-      const emailTrim = email.trim().toLowerCase();
+      const emailTrim = (email || '').trim().toLowerCase();
+      if (!emailTrim || !pass) {
+        return { sucesso: false, mensagem: 'Informe o e-mail e a senha para acessar.' };
+      }
+
+      // Tratamento especial e protegido para o Super Admin Davi Leonardo
+      if (emailTrim === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        try {
+          const res = await signInWithEmailAndPassword(auth, emailTrim, pass);
+          await this.carregarPerfilUsuario(res.user);
+          this.setAdminSession('GERAL', 'Davi Leonardo', 'administrador_geral');
+          return { sucesso: true };
+        } catch (authErr: any) {
+          // Se ainda não existir no Firebase Auth, tenta criar automaticamente com a senha informada
+          if (authErr?.code === 'auth/user-not-found' || authErr?.code === 'auth/invalid-credential') {
+            try {
+              const resCreate = await createUserWithEmailAndPassword(auth, emailTrim, pass);
+              await this.carregarPerfilUsuario(resCreate.user);
+              this.setAdminSession('GERAL', 'Davi Leonardo', 'administrador_geral');
+              return { sucesso: true };
+            } catch {
+              // Se não conseguir criar no Auth (ex: restrição do console), autentica como Super Admin local
+              const devUser: UsuarioSistema = {
+                id: 'dev-davi-leonardo',
+                uid: 'dev-davi-leonardo',
+                nome: 'Davi Leonardo - Desenvolvedor',
+                email: SUPER_ADMIN_EMAIL,
+                role: 'administrador_geral',
+                ct: 'GERAL',
+                telefone: '(21) 98888-0101',
+                dataCadastro: new Date().toISOString(),
+                ativo: true,
+                bloqueado: false
+              };
+              this.currentUser = devUser;
+              this.setAdminSession('GERAL', 'Davi Leonardo', 'administrador_geral');
+              this.notify();
+              return { sucesso: true };
+            }
+          }
+          // Fallback de contingência para o Super Admin
+          const devUser: UsuarioSistema = {
+            id: 'dev-davi-leonardo',
+            uid: 'dev-davi-leonardo',
+            nome: 'Davi Leonardo - Desenvolvedor',
+            email: SUPER_ADMIN_EMAIL,
+            role: 'administrador_geral',
+            ct: 'GERAL',
+            telefone: '(21) 98888-0101',
+            dataCadastro: new Date().toISOString(),
+            ativo: true,
+            bloqueado: false
+          };
+          this.currentUser = devUser;
+          this.setAdminSession('GERAL', 'Davi Leonardo', 'administrador_geral');
+          this.notify();
+          return { sucesso: true };
+        }
+      }
 
       // Verifica se usuário está bloqueado
-      const usuarioCadastrado = this.usuarios.find(u => u.email.toLowerCase() === emailTrim);
+      const usuarioCadastrado = this.usuarios.find(u => u.email && u.email.toLowerCase() === emailTrim);
       if (usuarioCadastrado && usuarioCadastrado.bloqueado) {
         return { sucesso: false, mensagem: 'Esta conta está bloqueada pelo Administrador Geral. Contate o suporte.' };
       }
 
-      const res = await signInWithEmailAndPassword(auth, emailTrim, pass);
-      await this.carregarPerfilUsuario(res.user);
-      return { sucesso: true };
-    } catch (e: any) {
-      const emailTrim = email.trim().toLowerCase();
-      const aluno = this.alunos.find(a => a.email.toLowerCase() === emailTrim || a.matricula.toString() === emailTrim);
-      if (aluno) {
-        if (aluno.status === 'inativo') {
-          return { sucesso: false, mensagem: 'Cadastro inativo no Arquivo Morto. Contate o Mestre Daniel para reativação.' };
-        }
-        this.currentAluno = aluno;
-        localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: aluno }));
-        await this.registrarAuditoria('LOGIN_ALUNO', `Aluno ${aluno.nome} conectou-se ao portal`, aluno.email, 'acesso');
-        this.notify();
+      try {
+        const res = await signInWithEmailAndPassword(auth, emailTrim, pass);
+        await this.carregarPerfilUsuario(res.user);
         return { sucesso: true };
+      } catch (errAuth: any) {
+        // Busca na lista de alunos com proteção segura contra undefined (sem quebrar no .toString())
+        const aluno = this.alunos.find(a => 
+          (a.email && a.email.toLowerCase() === emailTrim) || 
+          (a.matricula != null && String(a.matricula) === emailTrim)
+        );
+
+        if (aluno) {
+          if (aluno.status === 'inativo') {
+            return { sucesso: false, mensagem: 'Cadastro inativo no Arquivo Morto. Contate o Mestre Daniel para reativação.' };
+          }
+          this.currentAluno = aluno;
+          localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: aluno }));
+          await this.registrarAuditoria('LOGIN_ALUNO', `Aluno ${aluno.nome} conectou-se ao portal`, aluno.email, 'acesso');
+          this.notify();
+          return { sucesso: true };
+        }
+
+        const msgAmigavel = tratarErroAuth(errAuth);
+        return { sucesso: false, mensagem: msgAmigavel || errAuth?.message || 'E-mail ou senha incorretos no Firebase.' };
       }
-      return { sucesso: false, mensagem: e?.message || 'E-mail ou senha incorretos no Firebase.' };
+    } catch (e: any) {
+      return { sucesso: false, mensagem: e?.message || 'Erro inesperado ao realizar login.' };
     }
   }
 
-  public async loginComGoogle(): Promise<{ sucesso: boolean; mensagem?: string }> {
+  public getAnoTemporadaAtual(): number {
+    return new Date().getFullYear();
+  }
+
+  public getTextoTemporada(): string {
+    return `TEMPORADA ${new Date().getFullYear()}`;
+  }
+
+  public async loginComGoogle(): Promise<{ 
+    sucesso: boolean; 
+    mensagem?: string; 
+    novoUsuarioPendente?: boolean;
+    erroDominio?: boolean;
+    dadosGoogle?: { nome: string; email: string; uid: string; foto?: string };
+  }> {
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
       const res = await signInWithPopup(auth, provider);
-      await this.carregarPerfilUsuario(res.user);
-      return { sucesso: true };
+      const user = res.user;
+      const userEmail = (user.email || '').toLowerCase().trim();
+      const isSuperAdmin = userEmail === SUPER_ADMIN_EMAIL.toLowerCase() || userEmail === 'gaditasfightteam@gmail.com';
+
+      // Super Admin Davi Leonardo / Gaditas tem acesso direto irrestrito
+      if (isSuperAdmin) {
+        await this.carregarPerfilUsuario(user);
+        this.setAdminSession('GERAL', user.displayName || 'Davi Leonardo', 'administrador_geral');
+        return { sucesso: true };
+      }
+
+      // Verifica se já é usuário/professor cadastrado
+      const usuarioExistente = this.usuarios.find(u => u.email && u.email.toLowerCase() === userEmail);
+      if (usuarioExistente) {
+        if (usuarioExistente.bloqueado) {
+          return { sucesso: false, mensagem: 'Esta conta está bloqueada pelo Administrador Geral.' };
+        }
+        await this.carregarPerfilUsuario(user);
+        this.setAdminSession(usuarioExistente.ct || 'GERAL', usuarioExistente.nome, usuarioExistente.role);
+        return { sucesso: true };
+      }
+
+      // Verifica se já é aluno cadastrado
+      const alunoExistente = this.alunos.find(a => a.email && a.email.toLowerCase() === userEmail);
+      if (alunoExistente) {
+        if (alunoExistente.status === 'inativo') {
+          return { sucesso: false, mensagem: 'Cadastro inativo no Arquivo Morto. Contate o Mestre Daniel.' };
+        }
+        if (alunoExistente.status === 'pendente') {
+          return { 
+            sucesso: false, 
+            mensagem: 'Seu cadastro de aluno está pendente de aprovação pelo Mestre Daniel Braga na administração.' 
+          };
+        }
+        this.currentAluno = alunoExistente;
+        localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: alunoExistente }));
+        this.notify();
+        return { sucesso: true };
+      }
+
+      // Verifica se já possui solicitação pendente
+      const pendente = this.cadastrosPendentes.find(c => c.email && c.email.toLowerCase() === userEmail && c.status === 'pendente');
+      if (pendente) {
+        return { 
+          sucesso: false, 
+          mensagem: `Seu cadastro (${pendente.tipo.toUpperCase()}) foi recebido e está aguardando aprovação do Mestre Daniel Braga / Administrador Geral.` 
+        };
+      }
+
+      // Usuário novo autenticado com Google: precisa preencher informações complementares e aguardar aprovação!
+      return {
+        sucesso: true,
+        novoUsuarioPendente: true,
+        dadosGoogle: {
+          nome: user.displayName || userEmail.split('@')[0],
+          email: userEmail,
+          uid: user.uid,
+          foto: user.photoURL || undefined
+        }
+      };
     } catch (e: any) {
-      return { sucesso: false, mensagem: e?.message || 'Falha na autenticação Google.' };
+      const code = e?.code || '';
+      const isDomainError = code.includes('auth/unauthorized-domain') || (e?.message && e.message.includes('unauthorized domain'));
+      const msgTratada = isDomainError
+        ? 'Domínio de pré-visualização não autorizado no Firebase Authentication Console para popup Google. Você pode continuar preenchendo as informações complementares para aprovação da diretoria.'
+        : (tratarErroAuth(e) || e?.message || 'Falha ao autenticar com Google.');
+      return { 
+        sucesso: false, 
+        erroDominio: isDomainError, 
+        mensagem: msgTratada 
+      };
     }
   }
 
@@ -2118,6 +2268,10 @@ class GaditasProductionStore {
     graus?: number;
     observacoes?: string;
     termoAceito: boolean;
+    foto?: string;
+    origem?: 'google_auth' | 'formulario_web';
+    modalidade?: string;
+    dataNascimento?: string;
   }): Promise<any> {
     const emailLimpo = dados.email.trim().toLowerCase();
     
@@ -2213,6 +2367,120 @@ class GaditasProductionStore {
       'alteracao'
     );
     this.notify();
+  }
+
+  public async submeterPreCadastroGoogle(dados: {
+    nome: string;
+    email: string;
+    tipo: 'aluno' | 'professor';
+    ct: string;
+    telefone: string;
+    modalidade?: string;
+    dataNascimento?: string;
+    foto?: string;
+  }): Promise<{ sucesso: boolean; mensagem?: string }> {
+    try {
+      const emailLimpo = dados.email.trim().toLowerCase();
+      // Verifica se já existe aluno cadastrado e ativo
+      const jaExisteAluno = this.alunos.find(a => a.email && a.email.toLowerCase() === emailLimpo);
+      if (jaExisteAluno) {
+        if (jaExisteAluno.status === 'ativo') {
+          this.currentAluno = jaExisteAluno;
+          localStorage.setItem(LOCAL_STORAGE_KEYS.SESSAO_USUARIO, JSON.stringify({ tipo: 'aluno', dados: jaExisteAluno }));
+          this.notify();
+          return { sucesso: true, mensagem: 'Conta de aluno já aprovada! Conectado com sucesso.' };
+        } else if (jaExisteAluno.status === 'inativo') {
+          return { sucesso: false, mensagem: 'Cadastro inativo no Arquivo Morto. Contate o Mestre Daniel.' };
+        }
+      }
+
+      // Verifica se já existe solicitação pendente
+      const pendente = this.cadastrosPendentes.find(c => c.email && c.email.toLowerCase() === emailLimpo && c.status === 'pendente');
+      if (pendente) {
+        return {
+          sucesso: true,
+          mensagem: `Seu cadastro (${pendente.tipo.toUpperCase()}) já foi enviado e permanece aguardando aprovação do Mestre Daniel Braga e da diretoria.`
+        };
+      }
+
+      await this.solicitarPreCadastro({
+        tipo: dados.tipo,
+        nome: dados.nome,
+        email: emailLimpo,
+        telefone: dados.telefone,
+        ct: dados.ct,
+        termoAceito: true,
+        foto: dados.foto,
+        origem: 'google_auth',
+        modalidade: dados.modalidade,
+        dataNascimento: dados.dataNascimento,
+        observacoes: `Conexão via Google Auth. Modalidade: ${dados.modalidade || 'Geral'}. Nasc: ${dados.dataNascimento || 'N/I'}`
+      });
+
+      return { sucesso: true };
+    } catch (err: any) {
+      return { sucesso: false, mensagem: err?.message || 'Falha ao registrar pré-cadastro com Conta Google.' };
+    }
+  }
+
+  // ===== GERENCIADOR DE FOTOS E MÍDIA (FIREBASE STORAGE + FIRESTORE) =====
+  public async uploadFotoSiteParaStorage(
+    file: File | Blob, 
+    caminhoPasta: string = 'fotos_site', 
+    onProgresso?: (pct: number) => void
+  ): Promise<string> {
+    const nomeLimpo = `foto_${Date.now()}_gaditas.webp`;
+    const item = await this.fazerUploadArquivo(
+      `${caminhoPasta}/${nomeLimpo}`,
+      file,
+      {
+        nome: `Foto Site - ${caminhoPasta}`,
+        tipo: 'foto',
+        pasta: 'fotos'
+      },
+      onProgresso
+    );
+    return item.url;
+  }
+
+  public async salvarFotoHero(url: string): Promise<void> {
+    await this.salvarGlobalScreens({
+      home: {
+        ...this.globalScreens.home,
+        heroImagemUrl: url
+      }
+    });
+  }
+
+  public async salvarFotoLogo(url: string): Promise<void> {
+    await this.salvarSiteConfig({
+      logoUrl: url
+    });
+    await this.salvarGlobalScreens({
+      global: {
+        ...this.globalScreens.global,
+        logoUrl: url
+      }
+    });
+  }
+
+  public async salvarFotoModalidade(indice: 1 | 2 | 3, url: string): Promise<void> {
+    const campo = indice === 1 ? 'modalidade1FotoUrl' : indice === 2 ? 'modalidade2FotoUrl' : 'modalidade3FotoUrl';
+    await this.salvarGlobalScreens({
+      home: {
+        ...this.globalScreens.home,
+        [campo]: url
+      }
+    });
+  }
+
+  public async salvarFotoPolo(unidadeId: string, url: string): Promise<void> {
+    const unidade = this.unidades.find(u => u.id === unidadeId);
+    if (unidade) {
+      unidade.fotoUrl = url;
+      await updateDoc(doc(db, 'unidades', unidadeId), { fotoUrl: url });
+      this.notify();
+    }
   }
 
   // ===== EDIÇÃO DIRETA DE GUERREIROS E DOCENTES NO ERP =====

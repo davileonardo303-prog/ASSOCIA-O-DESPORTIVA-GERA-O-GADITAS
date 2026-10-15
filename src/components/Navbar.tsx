@@ -395,7 +395,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-amber-400" />
-                  <span>{alunoLogado ? `Portal: ${alunoLogado.nome}` : 'Portal do Aluno (Login)'}</span>
+                  <span>{alunoLogado ? `Guerreiro: ${alunoLogado.nome}` : 'Área do Guerreiro (Login)'}</span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-neutral-500" />
               </button>

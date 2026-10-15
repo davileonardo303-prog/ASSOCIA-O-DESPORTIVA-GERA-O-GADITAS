@@ -16,8 +16,10 @@ import {
   Trash2,
   Lock,
   Unlock,
-  AlertTriangle
+  AlertTriangle,
+  Camera
 } from 'lucide-react';
+import { GerenciadorFotosModal } from './GerenciadorFotosModal';
 
 interface AdminFloatingToolbarProps {
   modoEdicao: boolean;
@@ -43,6 +45,7 @@ export const AdminFloatingToolbar: React.FC<AdminFloatingToolbarProps> = ({
   const [alertaSucesso, setAlertaSucesso] = useState(false);
   const [modalAdmins, setModalAdmins] = useState(false);
   const [modalHistorico, setModalHistorico] = useState(false);
+  const [modalFotos, setModalFotos] = useState(false);
   const [novoEmailAdmin, setNovoEmailAdmin] = useState('');
   const [erroAdmin, setErroAdmin] = useState('');
   const [adminsList, setAdminsList] = useState<string[]>(() => store.getAdminsGerais());
@@ -222,6 +225,16 @@ export const AdminFloatingToolbar: React.FC<AdminFloatingToolbarProps> = ({
             <span className="hidden md:inline text-[11px]">Admins</span>
           </button>
 
+          {/* Trocar Fotos do Site (Firebase Storage) */}
+          <button
+            onClick={() => setModalFotos(true)}
+            className="p-2 rounded-xl text-xs font-bold bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700 transition-all cursor-pointer flex items-center gap-1.5 shadow-md hover:border-purple-500/50"
+            title="Alterar qualquer foto do site e salvar no Firebase Storage"
+          >
+            <Camera className="w-4 h-4 text-purple-400" />
+            <span className="hidden md:inline text-[11px]">Trocar Fotos</span>
+          </button>
+
           {/* Botão de Lockdown Exclusivo Super Admin */}
           {isSuperAdmin && (
             <button
@@ -377,6 +390,12 @@ export const AdminFloatingToolbar: React.FC<AdminFloatingToolbarProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL: GERENCIADOR DE FOTOS (FIREBASE STORAGE) */}
+      <GerenciadorFotosModal
+        isOpen={modalFotos}
+        onClose={() => setModalFotos(false)}
+      />
     </>
   );
 };
