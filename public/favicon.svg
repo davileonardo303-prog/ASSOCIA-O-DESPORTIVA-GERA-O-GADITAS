@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#cc0000"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#990000"/>
+    </linearGradient>
+    <radialGradient id="gradCenter" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1c1917"/>
+      <stop offset="100%" stop-color="#0a0a0a"/>
+    </radialGradient>
+  </defs>
+  <!-- Borda Externa Oficial Redonda -->
+  <circle cx="50" cy="50" r="48" fill="url(#gradCenter)" stroke="url(#gradRing)" stroke-width="4"/>
+  <circle cx="50" cy="50" r="43" fill="none" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2,2"/>
+  
+  <!-- Brasão Leão de Judá / Gaditas Marcial -->
+  <g transform="translate(25, 20) scale(0.5)" fill="#f59e0b">
+    <path d="M50 5 L65 25 L85 20 L75 45 L95 60 L70 70 L75 95 L50 80 L25 95 L30 70 L5 60 L25 45 L15 20 L35 25 Z" fill="#cc0000" opacity="0.3"/>
+    <path d="M50 15 C35 15 25 30 25 45 C25 65 35 75 50 85 C65 75 75 65 75 45 C75 30 65 15 50 15 Z" fill="#f59e0b"/>
+    <!-- Olhos e rugas -->
+    <circle cx="40" cy="40" r="4" fill="#0a0a0a"/>
+    <circle cx="60" cy="40" r="4" fill="#0a0a0a"/>
+    <circle cx="41" cy="39" r="1.5" fill="#ffffff"/>
+    <circle cx="61" cy="39" r="1.5" fill="#ffffff"/>
+    <polygon points="50,48 43,58 57,58" fill="#cc0000"/>
+    <!-- Dentes e presas -->
+    <polygon points="44,58 46,65 48,58" fill="#ffffff"/>
+    <polygon points="52,58 54,65 56,58" fill="#ffffff"/>
+  </g>
+  <!-- Tipografia de Borda -->
+  <text x="50" y="88" font-family="'Oswald', sans-serif" font-size="7" font-weight="900" fill="#f59e0b" text-anchor="middle" letter-spacing="1">GADITAS</text>
+  <text x="50" y="14" font-family="'Oswald', sans-serif" font-size="6" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">LUTA LIVRE · MUAY THAI</text>
+</svg>

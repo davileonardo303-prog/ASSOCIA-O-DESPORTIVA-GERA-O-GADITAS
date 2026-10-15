@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { store } from '../services/store';
-import { Unidade, Aluno } from '../types';
+import { Unidade } from '../types';
 import confetti from 'canvas-confetti';
-import { Shield, CheckCircle2, AlertCircle, ArrowLeft, HeartPulse, User, Lock, Phone, FileCheck, ArrowRight } from 'lucide-react';
+import { 
+  Shield, 
+  CheckCircle2, 
+  AlertCircle, 
+  ArrowLeft, 
+  HeartPulse, 
+  User, 
+  Lock, 
+  Phone, 
+  FileCheck, 
+  ArrowRight,
+  GraduationCap,
+  Users
+} from 'lucide-react';
 
 interface EnrollmentViewProps {
   onNavigate: (view: string) => void;
@@ -12,16 +25,23 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
   const [unidades, setUnidades] = useState<Unidade[]>(() => store.getUnidades());
   const [matriculaConfig, setMatriculaConfig] = useState(() => store.getGlobalScreens().matricula);
 
+  // Perfil obrigatório
+  const [tipoPerfil, setTipoPerfil] = useState<'aluno' | 'professor'>('aluno');
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [senha, setSenha] = useState('');
-  const [ct, setCt] = useState(() => store.getUnidades()[0]?.nome || 'Campo Grande');
+  const [cpf, setCpf] = useState('');
+  const [ct, setCt] = useState(() => store.getUnidades()[0]?.nome || 'Campo Grande (Sede)');
+  const [faixaDesejada, setFaixaDesejada] = useState('Amarela');
   const [tipoSanguineo, setTipoSanguineo] = useState('Não Sei');
   const [alergias, setAlergias] = useState('');
-  const [problemasSaude, setProblemasSaude] = useState('');
   const [contatoEmergencia, setContatoEmergencia] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   const [termoAceito, setTermoAceito] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [solicitacaoCriada, setSolicitacaoCriada] = useState<any | null>(null);
+  const [erroMsg, setErroMsg] = useState('');
 
   useEffect(() => {
     const unsub = store.subscribe(() => {
@@ -35,127 +55,125 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
     return unsub;
   }, [ct]);
 
-  const [loading, setLoading] = useState(false);
-  const [matriculaCriada, setMatriculaCriada] = useState<Aluno | null>(null);
-  const [erroMsg, setErroMsg] = useState('');
+  // Formatação automática de telefone (XX) XXXXX-XXXX
+  const formatarTelefone = (valor: string) => {
+    const apenasDigitos = valor.replace(/\D/g, '').slice(0, 11);
+    if (apenasDigitos.length <= 2) return apenasDigitos;
+    if (apenasDigitos.length <= 7) return `(${apenasDigitos.slice(0, 2)}) ${apenasDigitos.slice(2)}`;
+    return `(${apenasDigitos.slice(0, 2)}) ${apenasDigitos.slice(2, 7)}-${apenasDigitos.slice(7)}`;
+  };
+
+  const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTelefone(formatarTelefone(e.target.value));
+  };
+
+  const handleContatoEmergenciaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setContatoEmergencia(formatarTelefone(e.target.value));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErroMsg('');
 
-    if (!nome.trim() || !email.trim() || !telefone.trim() || !contatoEmergencia.trim()) {
-      setErroMsg('Por favor, preencha todos os campos obrigatórios.');
-      return;
-    }
-
-    if (senha.length < 6) {
-      setErroMsg('A senha deve possuir no mínimo 6 dígitos.');
+    if (!nome.trim() || !email.trim() || !telefone.trim() || !ct) {
+      setErroMsg('Por favor, preencha todos os campos obrigatórios (*).');
       return;
     }
 
     if (!termoAceito) {
-      setErroMsg('Você deve aceitar os termos do dojo e autorização médica.');
-      return;
-    }
-
-    // Verifica se e-mail já existe
-    const existente = store.getAlunoByEmail(email);
-    if (existente) {
-      setErroMsg('Este e-mail já possui cadastro. Faça login na Área do Aluno.');
+      setErroMsg('É obrigatório aceitar o termo de responsabilidade e conduta do dojo.');
       return;
     }
 
     setLoading(true);
 
     try {
-      const novo = await store.cadastrarAluno({
+      const res = await store.solicitarPreCadastro({
+        tipo: tipoPerfil,
         nome: nome.trim(),
         email: email.toLowerCase().trim(),
         telefone: telefone.trim(),
+        cpf: cpf.trim(),
         ct,
-        faixa: 'Amarela',
+        faixa: (faixaDesejada as any) || 'Amarela',
         graus: 0,
-        tipo_sanguineo: tipoSanguineo,
-        alergias: alergias.trim() || 'Nenhuma',
-        problemas_saude: problemasSaude.trim() || '',
-        contato_emergencia: contatoEmergencia.trim(),
-        termo_aceito: true
+        observacoes: observacoes.trim(),
+        termoAceito: true
       });
 
-      // Confetti celebration
+      // Efeito festivo de boas-vindas
       try {
         confetti({
-          particleCount: 80,
-          spread: 70,
+          particleCount: 90,
+          spread: 75,
           origin: { y: 0.6 }
         });
-      } catch {
-        // Fallback
-      }
+      } catch {}
 
-      setMatriculaCriada(novo);
+      setSolicitacaoCriada(res);
     } catch (err: any) {
-      setErroMsg(err?.message || 'Erro ao registrar matrícula. Tente novamente.');
+      setErroMsg(err?.message || 'Falha ao processar solicitação de pré-cadastro.');
     } finally {
       setLoading(false);
     }
   };
 
-  if (matriculaCriada) {
+  if (solicitacaoCriada) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16">
         <div className="p-8 sm:p-10 rounded-3xl bg-neutral-900 border border-emerald-500/40 shadow-2xl text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center border border-emerald-500/40">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center border border-emerald-500/40 animate-pulse">
             <CheckCircle2 className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
             <span className="text-xs font-black uppercase tracking-widest text-emerald-400">
-              Matrícula Realizada com Sucesso!
+              Solicitação Registrada no Firebase!
             </span>
             <h2 className="text-3xl font-black uppercase text-white">
               BEM-VINDO À <span className="text-red-500">EQUIPE GADITAS</span>
             </h2>
             <p className="text-xs text-neutral-300">
-              Sua ficha foi enviada para o polo <strong className="text-white">{matriculaCriada.ct}</strong> sob a liderança do Mestre Daniel Braga.
+              Sua solicitação de cadastro como <strong className="text-amber-400 uppercase">{solicitacaoCriada.tipo}</strong> foi enviada para o polo <strong className="text-white">{solicitacaoCriada.ct}</strong>.
             </p>
           </div>
 
-          <div className="p-6 rounded-2xl bg-black border border-neutral-800 space-y-2 text-center">
-            <span className="text-[10px] uppercase font-bold text-neutral-400">Seu Número Oficial de Guerreiro</span>
-            <div className="text-4xl font-black font-mono text-amber-400">
-              #{matriculaCriada.matricula}
+          <div className="p-5 rounded-2xl bg-black border border-neutral-800 space-y-2 text-center">
+            <span className="text-[10px] uppercase font-bold text-neutral-400">Status do Cadastro</span>
+            <div className="text-2xl font-black uppercase text-amber-400 flex items-center justify-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+              <span>Pendente de Aprovação</span>
             </div>
-            <span className="text-xs text-neutral-400 block">
-              Guarde este número para identificação nas aulas e campeonatos.
-            </span>
+            <p className="text-xs text-neutral-400">
+              O Administrador Geral ou o Professor responsável do polo irá homologar sua ficha no sistema ERP para liberar seu acesso completo.
+            </p>
           </div>
 
           <div className="p-4 rounded-xl bg-neutral-950/80 border border-neutral-800 text-left text-xs space-y-1.5 text-neutral-300">
-            <div><strong>Atleta:</strong> {matriculaCriada.nome}</div>
-            <div><strong>E-mail de Acesso:</strong> {matriculaCriada.email}</div>
-            <div><strong>Unidade:</strong> {matriculaCriada.ct}</div>
-            <div><strong>Graduação Inicial:</strong> Faixa {matriculaCriada.faixa} (Projarde)</div>
-            <div><strong>Status Atual:</strong> <span className="text-amber-400 font-bold uppercase">Pendente de Homologação</span></div>
+            <div><strong>Guerreiro:</strong> {solicitacaoCriada.nome}</div>
+            <div><strong>E-mail:</strong> {solicitacaoCriada.email}</div>
+            <div><strong>Telefone:</strong> {solicitacaoCriada.telefone}</div>
+            <div><strong>Polo Selecionado:</strong> {solicitacaoCriada.ct}</div>
+            <div><strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}</div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button
-              onClick={() => {
-                store.setAlunoLogado(matriculaCriada.id);
-                onNavigate('aluno-portal');
-              }}
-              className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-black text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-red-950/60"
-            >
-              <span>Acessar Meu Painel do Aluno</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => onNavigate('home')}
-              className="w-full py-3.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              className="flex-1 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-bold text-xs uppercase cursor-pointer"
             >
               Voltar ao Início
             </button>
+            <a
+              href={`https://api.whatsapp.com/send?phone=5521988880101&text=${encodeURIComponent(
+                `Olá Mestre Daniel! Acabei de enviar minha solicitação de pré-cadastro como ${solicitacaoCriada.tipo.toUpperCase()} no Polo ${solicitacaoCriada.ct}. Meu nome é ${solicitacaoCriada.nome}.`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+            >
+              <span>Avisar no WhatsApp</span>
+            </a>
           </div>
         </div>
       </div>
@@ -163,7 +181,7 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-12 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
       
       {/* Botão Voltar */}
       <button
@@ -171,160 +189,182 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
         className="inline-flex items-center gap-2 text-xs font-bold uppercase text-neutral-400 hover:text-white transition-colors cursor-pointer"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Voltar para a página inicial</span>
+        <span>Voltar para a Página Inicial</span>
       </button>
 
-      {/* Card do Formulário */}
-      <div className="p-8 sm:p-10 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-2xl space-y-8">
-        
-        {/* Cabeçalho */}
-        <div className="text-center space-y-2 border-b border-neutral-800 pb-6">
-          <div className="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 text-red-500 mx-auto flex items-center justify-center mb-2">
-            <Shield className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase text-white">
-            {matriculaConfig.titulo || 'MATRÍCULA ONLINE GADITAS'}
-          </h1>
-          <p className="text-xs text-neutral-400">
-            {matriculaConfig.subtitulo || 'Cadastre-se para treinar na Equipe Gaditas. O número de matrícula sequencial é gerado automaticamente.'}
-          </p>
+      {/* Header Institucional */}
+      <div className="text-center max-w-2xl mx-auto space-y-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-950/60 border border-red-500/40 rounded-full text-red-400 text-xs font-black uppercase tracking-wider">
+          <Shield className="w-3.5 h-3.5 text-amber-400" />
+          <span>Inscrição Oficial & Alistamento de Guerreiro</span>
+        </div>
+        <h1 className="text-3xl sm:text-5xl font-black uppercase text-white">
+          {matriculaConfig.titulo || 'PRÉ-CADASTRO & MATRÍCULA ONLINE'}
+        </h1>
+        <p className="text-neutral-400 text-sm leading-relaxed">
+          {matriculaConfig.subtitulo || 'Junte-se à Equipe Gaditas Fight Team. Preencha seus dados para treinar no CT mais próximo ou atuar como instrutor credenciado.'}
+        </p>
+      </div>
 
-          {/* Benefícios configurados no CMS */}
-          {(matriculaConfig.beneficio1 || matriculaConfig.beneficio2 || matriculaConfig.beneficio3) && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3 text-left">
-              {matriculaConfig.beneficio1 && (
-                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{matriculaConfig.beneficio1}</span>
-                </div>
-              )}
-              {matriculaConfig.beneficio2 && (
-                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{matriculaConfig.beneficio2}</span>
-                </div>
-              )}
-              {matriculaConfig.beneficio3 && (
-                <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-300 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{matriculaConfig.beneficio3}</span>
-                </div>
-              )}
-            </div>
-          )}
+      {/* Formulário de Matrícula */}
+      <form onSubmit={handleSubmit} className="p-6 sm:p-10 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-2xl space-y-8">
+        
+        {/* SELEÇÃO OBRIGATÓRIA DE PERFIL */}
+        <div className="space-y-3">
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 block">
+            1. Perfil de Solicitação *
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => setTipoPerfil('aluno')}
+              className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                tipoPerfil === 'aluno'
+                  ? 'bg-red-950/60 border-red-500 text-white shadow-lg shadow-red-950/50'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
+              }`}
+            >
+              <Users className="w-6 h-6 text-red-500" />
+              <span className="text-sm font-black uppercase">Quero ser Aluno / Atleta</span>
+              <span className="text-[10px] text-neutral-400 text-center">Treinos de Muay Thai, Luta Livre e MMA</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTipoPerfil('professor')}
+              className={`p-4 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all cursor-pointer ${
+                tipoPerfil === 'professor'
+                  ? 'bg-amber-950/60 border-amber-500 text-white shadow-lg shadow-amber-950/50'
+                  : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-white hover:border-neutral-700'
+              }`}
+            >
+              <GraduationCap className="w-6 h-6 text-amber-400" />
+              <span className="text-sm font-black uppercase">Professor / Instrutor</span>
+              <span className="text-[10px] text-neutral-400 text-center">Ministrar aulas e conduzir turmas de CT</span>
+            </button>
+          </div>
         </div>
 
-        {erroMsg && (
-          <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-500/60 text-red-300 text-xs flex items-center gap-3">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
-            <span>{erroMsg}</span>
-          </div>
-        )}
+        {/* DADOS PESSOAIS */}
+        <div className="space-y-4">
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 block border-t border-neutral-800 pt-6">
+            2. Dados de Identificação *
+          </label>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          
-          {/* GRUPO 1: DADOS PESSOAIS */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <User className="w-4 h-4" />
-              <span>1. Dados Pessoais & Polo</span>
-            </h3>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                Nome Completo do Aluno *
-              </label>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">Nome Completo *</label>
               <input
                 type="text"
-                required
                 value={nome}
                 onChange={e => setNome(e.target.value)}
-                placeholder="Ex: Matheus Oliveira Santos"
-                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
+                placeholder="Ex: João da Silva"
+                required
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  WhatsApp com DDD *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={telefone}
-                  onChange={e => setTelefone(e.target.value)}
-                  placeholder="(21) 99999-9999"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  Polo / CT Desejado *
-                </label>
-                <select
-                  value={ct}
-                  onChange={e => setCt(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
-                >
-                  {unidades.map(u => (
-                    <option key={u.id} value={u.nome}>
-                      {u.nome.toUpperCase()} {u.tipo === 'bolsista' ? '(Regime Social)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">E-mail Principal *</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="seu.email@exemplo.com"
+                required
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  E-mail (Será seu Login) *
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="seu.email@exemplo.com"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
-                />
-              </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">WhatsApp / Telefone com DDD *</label>
+              <input
+                type="text"
+                value={telefone}
+                onChange={handleTelefoneChange}
+                placeholder="(21) 99999-9999"
+                required
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
 
-              <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  Crie uma Senha (Mínimo 6 dígitos) *
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={senha}
-                  onChange={e => setSenha(e.target.value)}
-                  placeholder="******"
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
-                />
-              </div>
+            <div>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">CPF (Opcional para carteirinha)</label>
+              <input
+                type="text"
+                value={cpf}
+                onChange={e => setCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
+              />
             </div>
           </div>
+        </div>
 
-          {/* GRUPO 2: FICHA MÉDICA & EMERGÊNCIA */}
-          <div className="space-y-4 pt-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <HeartPulse className="w-4 h-4" />
-              <span>2. Ficha Médica & Contato de Emergência</span>
-            </h3>
+        {/* POLO E GRADUAÇÃO */}
+        <div className="space-y-4">
+          <label className="text-xs font-black uppercase tracking-wider text-amber-400 block border-t border-neutral-800 pt-6">
+            3. Polo de Atuação & Informações Técnicas *
+          </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">Centro de Treinamento (CT) *</label>
+              <select
+                value={ct}
+                onChange={e => setCt(e.target.value)}
+                required
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-amber-300 font-bold focus:outline-none focus:border-red-500"
+              >
+                {unidades.map(u => (
+                  <option key={u.id} value={u.nome}>
+                    {u.nome} ({u.tipo === 'bolsista' ? 'Social Isento' : 'Regular R$ 120'})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">
+                {tipoPerfil === 'aluno' ? 'Graduação Atual (Projarde)' : 'Faixa de Docência'}
+              </label>
+              <select
+                value={faixaDesejada}
+                onChange={e => setFaixaDesejada(e.target.value)}
+                className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white focus:outline-none focus:border-red-500"
+              >
+                <option value="Amarela">Amarela (Iniciante)</option>
+                <option value="Amarela e Branca">Amarela e Branca</option>
+                <option value="Verde">Verde</option>
+                <option value="Verde e Branca">Verde e Branca</option>
+                <option value="Azul">Azul</option>
+                <option value="Azul e Branca">Azul e Branca</option>
+                <option value="Marrom">Marrom</option>
+                <option value="Marrom e Branca">Marrom e Branca</option>
+                <option value="Vermelha">Vermelha</option>
+                <option value="Vermelha e Branca">Vermelha e Branca</option>
+                <option value="Vermelho e Amarelo">Vermelho e Amarelo</option>
+                <option value="Preta">Preta</option>
+                <option value="Preta e Branca">Preta e Branca</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* FICHA MÉDICA BÁSICA & EMERGÊNCIA */}
+        {tipoPerfil === 'aluno' && (
+          <div className="space-y-4">
+            <label className="text-xs font-black uppercase tracking-wider text-amber-400 block border-t border-neutral-800 pt-6">
+              4. Ficha Médica de Segurança & Contato de Emergência
+            </label>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  Tipo Sanguíneo
-                </label>
+                <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">Tipo Sanguíneo</label>
                 <select
                   value={tipoSanguineo}
                   onChange={e => setTipoSanguineo(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
+                  className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white focus:outline-none focus:border-red-500"
                 >
                   <option value="Não Sei">Não Sei</option>
                   <option value="A+">A+</option>
@@ -339,100 +379,69 @@ export const EnrollmentView: React.FC<EnrollmentViewProps> = ({ onNavigate }) =>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                  Possui Alergias? (Medicamentos, etc)
-                </label>
+                <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">Alergias ou Restrições</label>
                 <input
                   type="text"
                   value={alergias}
                   onChange={e => setAlergias(e.target.value)}
-                  placeholder="Ex: Nenhuma ou Dipirona..."
-                  className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
+                  placeholder="Ex: Nenhuma / Rinite"
+                  className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase text-neutral-400 block mb-1">Contato de Emergência</label>
+                <input
+                  type="text"
+                  value={contatoEmergencia}
+                  onChange={handleContatoEmergenciaChange}
+                  placeholder="(21) 99999-9999"
+                  className="w-full px-4 py-3 bg-neutral-950 border border-neutral-700 rounded-xl text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-red-500"
                 />
               </div>
             </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                Problemas de Saúde, Cirurgias ou Lesões Recentes?
-              </label>
-              <textarea
-                value={problemasSaude}
-                onChange={e => setProblemasSaude(e.target.value)}
-                rows={2}
-                placeholder="Ex: Asma, hipertensão, lesão em joelho..."
-                className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-xs resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase text-neutral-400 mb-1">
-                Contato de Emergência (Nome, Parentesco e Telefone) *
-              </label>
-              <input
-                type="text"
-                required
-                value={contatoEmergencia}
-                onChange={e => setContatoEmergencia(e.target.value)}
-                placeholder="Ex: Maria (Mãe) - (21) 98888-8888"
-                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-800 focus:border-red-500 focus:outline-none text-white text-sm"
-              />
-            </div>
           </div>
+        )}
 
-          {/* GRUPO 3: TERMOS E AUTORIZAÇÃO */}
-          <div className="space-y-3 pt-4">
-            <h3 className="text-xs font-black uppercase tracking-wider text-red-400 flex items-center gap-2 border-b border-neutral-800 pb-2">
-              <FileCheck className="w-4 h-4" />
-              <span>3. Termo de Compromisso e Consentimento</span>
-            </h3>
+        {/* TERMO DE RESPONSABILIDADE */}
+        <div className="space-y-3 border-t border-neutral-800 pt-6">
+          <label className="flex items-start gap-3 cursor-pointer p-4 bg-neutral-950 border border-neutral-800 rounded-2xl hover:border-neutral-700 transition-colors">
+            <input
+              type="checkbox"
+              checked={termoAceito}
+              onChange={e => setTermoAceito(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded text-red-600 focus:ring-red-500 accent-red-600 cursor-pointer"
+            />
+            <span className="text-xs text-neutral-300 leading-relaxed">
+              {matriculaConfig.avisoTermo || 'Declaro estar apto para a prática de artes marciais de contato (Muay Thai, Luta Livre e MMA), isentando a Associação Desportiva Gaditas de lesões decorrentes do treino e comprometendo-me a respeitar a hierarquia marcial e as diretrizes do Mestre Daniel Braga.'}
+            </span>
+          </label>
+        </div>
 
-            <div className="p-4 rounded-xl bg-black/60 border border-neutral-800 text-[11px] text-neutral-300 leading-relaxed max-h-32 overflow-y-auto">
-              Declaro estar em perfeitas condições físicas e mentais para a prática de artes marciais de contato (Muay Thai, Luta Livre, MMA e Boxe). Autorizo o uso da minha imagem em fotos e vídeos institucionais para divulgação dos treinos e competições da Associação Desportiva Gaditas. Comprometo-me a zelar pela integridade dos parceiros de treino, honrar a hierarquia e manter a disciplina marcial dentro e fora do dojo.
-            </div>
-
-            <label className="flex items-start gap-3 cursor-pointer pt-2">
-              <input
-                type="checkbox"
-                required
-                checked={termoAceito}
-                onChange={e => setTermoAceito(e.target.checked)}
-                className="mt-0.5 rounded border-neutral-700 bg-neutral-950 text-red-600 focus:ring-red-500"
-              />
-              <span className="text-xs text-neutral-300">
-                Li, compreendo e concordo com os termos de prática esportiva e autorização médica.
-              </span>
-            </label>
+        {erroMsg && (
+          <div className="p-3.5 bg-red-950/60 border border-red-500/50 rounded-xl text-xs text-red-300 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{erroMsg}</span>
           </div>
+        )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 rounded-xl bg-red-600 hover:bg-red-500 disabled:bg-neutral-800 text-white font-black text-xs uppercase tracking-wider shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer"
-          >
-            {loading ? (
-              <span>Processando Matrícula...</span>
-            ) : (
-              <>
-                <span>Finalizar Matrícula & Gerar Identificação</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+        {/* BOTÃO SUBMIT */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-4 px-6 rounded-2xl bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white font-black text-sm uppercase tracking-wider shadow-xl shadow-red-950/60 transition-all flex items-center justify-center gap-2 cursor-pointer"
+        >
+          {loading ? (
+            <span>Processando Solicitação...</span>
+          ) : (
+            <>
+              <span>{matriculaConfig.botaoTexto || 'Enviar Solicitação de Matrícula'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
 
-          <p className="text-center text-xs text-neutral-400 pt-2">
-            Já possui matrícula ativa?{' '}
-            <button
-              type="button"
-              onClick={() => onNavigate('aluno-portal')}
-              className="text-red-400 font-bold hover:underline cursor-pointer"
-            >
-              Fazer Login na Área do Aluno
-            </button>
-          </p>
-
-        </form>
-      </div>
+      </form>
 
     </div>
   );

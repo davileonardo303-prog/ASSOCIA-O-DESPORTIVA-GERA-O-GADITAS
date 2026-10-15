@@ -52,7 +52,12 @@ import {
 const SUPER_ADMIN_EMAIL = 'davileonardo303@gmail.com';
 
 const INITIAL_UNIDADES_OFICIAIS: Unidade[] = [
-  { id: 'uni-campo-grande', nome: 'Campo Grande', tipo: 'pagante', responsavel: 'Mestre Daniel Braga', endereco: 'Rua Principal, Campo Grande - RJ', telefone: '(21) 99999-0001' },
+  { id: 'uni-vila-ieda', nome: 'Vila Ieda CG', tipo: 'pagante', responsavel: 'Mestre Daniel Braga', endereco: 'Polo Vila Ieda, Campo Grande - RJ', telefone: '(21) 98888-0101' },
+  { id: 'uni-riviera', nome: 'Parque Riviera Tropical', tipo: 'pagante', responsavel: 'Professor Lucas Rocha', endereco: 'Riviera Tropical, Campo Grande - RJ', telefone: '(21) 99999-0002' },
+  { id: 'uni-torre-forte', nome: 'Torre Forte', tipo: 'pagante', responsavel: 'Professor Marcos Santos', endereco: 'Polo Torre Forte - RJ', telefone: '(21) 99999-0003' },
+  { id: 'uni-km34', nome: 'KM34', tipo: 'pagante', responsavel: 'Equipe Gaditas Fight Team', endereco: 'Rodovia KM 34 - RJ', telefone: '(21) 99999-0004' },
+  { id: 'uni-jardins-brito', nome: 'Jardins do Brito', tipo: 'pagante', responsavel: 'Associação Desportiva Gaditas', endereco: 'Jardins do Brito, Campo Grande - RJ', telefone: '(21) 99999-0005' },
+  { id: 'uni-campo-grande', nome: 'Campo Grande (Sede)', tipo: 'pagante', responsavel: 'Mestre Daniel Braga', endereco: 'Rua Principal, Campo Grande - RJ', telefone: '(21) 98888-0101' },
   { id: 'uni-bangu', nome: 'Bangu', tipo: 'pagante', responsavel: 'Professor Lucas Rocha', endereco: 'Av. Cônego de Vasconcelos, Bangu - RJ', telefone: '(21) 99999-0002' },
   { id: 'uni-seropedica', nome: 'Seropédica', tipo: 'pagante', responsavel: 'Professor Marcos Santos', endereco: 'Km 40, Seropédica - RJ', telefone: '(21) 99999-0003' },
   { id: 'uni-nova-iguacu', nome: 'Nova Iguaçu (Social)', tipo: 'bolsista', responsavel: 'Associação Desportiva Gaditas', endereco: 'Polo Nova Iguaçu - RJ', telefone: '(21) 99999-0004' }
@@ -69,7 +74,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   subtituloHero: 'Do tatame para a vida. CT de Alta Performance sob a liderança do Mestre Daniel Braga.',
   chavePixOficial: 'gaditasfightteam@gmail.com',
   valorMensalidadePadrao: 120,
-  whatsappContato: '(21) 99999-0001',
+  whatsappContato: '(21) 98888-0101',
   instagramUrl: 'https://www.instagram.com/gaditas_fight',
   facebookUrl: 'https://www.facebook.com/gaditasfightteam',
   emailContato: 'gaditasfightteam@gmail.com',
@@ -79,16 +84,13 @@ export const DEFAULT_SITE_CONFIG: SiteConfig = {
   avisoGlobal: '',
   avisoGlobalAtivo: false,
   notificacoesAtivas: true,
-  notificacaoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Bangu e Seropédica!',
+  notificacaoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Vila Ieda, Riviera, Torre Forte e demais polos!',
   rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. CNPJ 00.000.000/0001-00.',
   menuItens: [
     { id: 'm1', label: 'Início', viewOuLink: 'home', visivel: true, ordem: 1 },
-    { id: 'm2', label: 'Horários', viewOuLink: 'horarios', visivel: true, ordem: 2 },
-    { id: 'm3', label: 'Graduações', viewOuLink: 'graduacoes', visivel: true, ordem: 3 },
-    { id: 'm4', label: 'Matrícula', viewOuLink: 'matricula', visivel: true, ordem: 4 },
-    { id: 'm5', label: 'Saúde Firebase', viewOuLink: 'saude-firebase', visivel: true, ordem: 5 },
-    { id: 'm6', label: 'Portal do Aluno', viewOuLink: 'aluno-portal', visivel: true, ordem: 6 },
-    { id: 'm7', label: 'Administração', viewOuLink: 'admin-portal', visivel: true, ordem: 7 }
+    { id: 'm2', label: 'Sobre o CT', viewOuLink: 'sobre', visivel: true, ordem: 2 },
+    { id: 'm3', label: 'Galeria', viewOuLink: 'galeria', visivel: true, ordem: 3 },
+    { id: 'm4', label: 'Matrícula', viewOuLink: 'matricula', visivel: true, ordem: 4 }
   ]
 };
 
@@ -113,7 +115,15 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     horariosSubtitulo: 'Turmas divididas por idade, graduação e foco esportivo (iniciante ao avançado).',
     ctaBannerTitulo: 'PRONTO PARA FORJAR SEU CARÁTER E SUA TÉCNICA?',
     ctaBannerTexto: 'Agende hoje mesmo uma aula experimental gratuita em qualquer um dos nossos polos e vivencie a disciplina da Equipe Gaditas.',
-    ctaBannerBotao: 'Falar com o Mestre no WhatsApp'
+    ctaBannerBotao: 'Falar com o Mestre no WhatsApp',
+    heroVisivel: true,
+    modalidadesVisivel: true,
+    horariosVisivel: true,
+    polosVisivel: true,
+    ctaBannerVisivel: true,
+    heroImagemUrl: '',
+    modalidade1FotoUrl: '',
+    modalidade2FotoUrl: ''
   },
   sobre: {
     tituloMestre: 'MESTRE DANIEL BRAGA',
@@ -161,6 +171,9 @@ export const DEFAULT_GLOBAL_SCREENS: GlobalScreensConfig = {
     emailContato: 'gaditasfightteam@gmail.com',
     notificacaoTopoAtiva: true,
     notificacaoTopoTexto: 'Matrículas abertas para a nova temporada de treinos nos CTs Campo Grande, Bangu e Seropédica!',
+    notificacaoTopoCor: 'amarelo',
+    notificacaoDataExpiracao: '',
+    chatbotBoasVindas: 'Oss! Seja muito bem-vindo à Equipe Gaditas Fight Team! Sou o Atendente Virtual e posso tirar suas dúvidas sobre horários, valores, polos e agendar sua 1ª Aula Experimental Gratuita com o Mestre Daniel Braga. Como posso te ajudar hoje?',
     rodapeTexto: '© 2026 Associação Desportiva Equipe Gaditas Fight Team · Todos os direitos reservados. Metodologia Projarde.'
   }
 };
@@ -433,6 +446,7 @@ class GaditasProductionStore {
   public cmsLastUpdatedBy: string = 'sistema';
   public cmsLastUpdatedAt: string = '';
 
+  public lockdownAtivo: boolean = false;
   private adminEmailsList: string[] = [SUPER_ADMIN_EMAIL.toLowerCase()];
   private alunos: Aluno[] = [];
   private unidades: Unidade[] = (() => {
@@ -446,6 +460,47 @@ class GaditasProductionStore {
     return [...INITIAL_UNIDADES_OFICIAIS];
   })();
   private usuarios: UsuarioSistema[] = [];
+  private cadastrosPendentes: any[] = [];
+  private cmsHistory: any[] = [];
+  private leadsAtendimento: any[] = [];
+  private galeriaItems: any[] = [
+    {
+      id: 'gal-1',
+      titulo: 'Copa Estadual de Muay Thai Projarde',
+      categoria: 'campeonatos',
+      url: 'https://images.unsplash.com/photo-1549719386-74dfcbf7dbed?auto=format&fit=crop&w=1200&q=80',
+      legenda: 'Equipe Gaditas conquista 5 ouros e 2 cinturões na etapa da Baixada Fluminense.',
+      instagramPostUrl: 'https://www.instagram.com/gaditas_fight',
+      ordem: 1
+    },
+    {
+      id: 'gal-2',
+      titulo: 'Graduação Anual Faixas e Graus Projarde',
+      categoria: 'cinturoes',
+      url: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80',
+      legenda: 'Consagração de novos faixas pretas sob o comando do Mestre Daniel Braga.',
+      instagramPostUrl: 'https://www.instagram.com/gaditas_fight',
+      ordem: 2
+    },
+    {
+      id: 'gal-3',
+      titulo: 'Treino Tático e Sparring de Alto Rendimento',
+      categoria: 'treinos',
+      url: 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?auto=format&fit=crop&w=1200&q=80',
+      legenda: 'Clínica de striking e defesa pessoal no CT Campo Grande.',
+      instagramPostUrl: 'https://www.instagram.com/gaditas_fight',
+      ordem: 3
+    },
+    {
+      id: 'gal-4',
+      titulo: 'Instagram Oficial @gaditas_fight',
+      categoria: 'instagram',
+      url: 'https://images.unsplash.com/photo-1552072805-2a9039d00e57?auto=format&fit=crop&w=1200&q=80',
+      legenda: 'Acompanhe nosso dia a dia, bastidores e histórias de superação no feed oficial.',
+      instagramPostUrl: 'https://www.instagram.com/gaditas_fight',
+      ordem: 4
+    }
+  ];
   private financeiro: FinanceiroItem[] = [];
   private estoque: EstoqueItem[] = [];
   private frequencia: FrequenciaRecord[] = [];
@@ -877,6 +932,63 @@ class GaditasProductionStore {
       }, (err) => {
         console.warn('Snapshot avisos error:', err);
       });
+
+      // 6. Escuta em TEMPO REAL doc cms_settings/lockdown (Lockdown Mode)
+      const docLockdownRef = doc(db, 'cms_settings', 'lockdown');
+      onSnapshot(docLockdownRef, (snap) => {
+        if (snap.exists()) {
+          this.lockdownAtivo = !!snap.data()?.ativo;
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot lockdown error:', err);
+      });
+
+      // 7. Escuta em TEMPO REAL coleção cadastros_pendentes (Aprovações)
+      const colPendentesRef = collection(db, 'cadastros_pendentes');
+      onSnapshot(colPendentesRef, (snap) => {
+        if (!snap.empty) {
+          this.cadastrosPendentes = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        } else {
+          this.cadastrosPendentes = [];
+        }
+        this.notify();
+      }, (err) => {
+        console.warn('Snapshot cadastros_pendentes error:', err);
+      });
+
+      // 8. Escuta em TEMPO REAL coleção cms_history (Histórico de 10 versões)
+      const colHistoryRef = collection(db, 'cms_history');
+      onSnapshot(colHistoryRef, (snap) => {
+        if (!snap.empty) {
+          this.cmsHistory = snap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => (b.data || '').localeCompare(a.data || '')).slice(0, 10);
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot cms_history error:', err);
+      });
+
+      // 9. Escuta em TEMPO REAL coleção leads_atendimento (Chatbot IA)
+      const colLeadsRef = collection(db, 'leads_atendimento');
+      onSnapshot(colLeadsRef, (snap) => {
+        if (!snap.empty) {
+          this.leadsAtendimento = snap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => (b.data || '').localeCompare(a.data || ''));
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot leads error:', err);
+      });
+
+      // 10. Escuta em TEMPO REAL coleção galeria
+      const colGaleriaRef = collection(db, 'galeria');
+      onSnapshot(colGaleriaRef, (snap) => {
+        if (!snap.empty) {
+          this.galeriaItems = snap.docs.map(d => ({ id: d.id, ...d.data() } as any)).sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0));
+          this.notify();
+        }
+      }, (err) => {
+        console.warn('Snapshot galeria error:', err);
+      });
     } catch (e) {
       console.warn('Erro ao configurar listeners do CMS:', e);
     }
@@ -894,8 +1006,52 @@ class GaditasProductionStore {
     };
   }
 
+  public isLockdownAtivo(): boolean {
+    return this.lockdownAtivo;
+  }
+
+  public async toggleLockdown(ativar: boolean): Promise<void> {
+    const emailAtual = (this.currentUser?.email || auth.currentUser?.email || '').toLowerCase().trim();
+    if (emailAtual !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+      throw new Error('Apenas o Super Admin Davi Leonardo tem autorização para ativar ou desativar o Modo Lockdown.');
+    }
+    await setDoc(doc(db, 'cms_settings', 'lockdown'), {
+      ativo: ativar,
+      alteradoPor: emailAtual,
+      alteradoEm: serverTimestamp()
+    }, { merge: true });
+    this.lockdownAtivo = ativar;
+    await this.registrarAuditoria(
+      ativar ? 'LOCKDOWN_ATIVADO' : 'LOCKDOWN_DESATIVADO',
+      `Modo de Congelamento de Edições (Lockdown) ${ativar ? 'ATIVADO' : 'DESATIVADO'} pelo Super Admin`,
+      emailAtual,
+      'sistema'
+    );
+    this.notify();
+  }
+
   public async salvarGlobalScreens(novosDados: Partial<GlobalScreensConfig>): Promise<void> {
     const emailAtual = this.currentUser?.email || auth.currentUser?.email || 'admin_geral';
+
+    // Verificação estrita de Lockdown: apenas Super Admin pode salvar durante manutenção
+    if (this.lockdownAtivo && emailAtual.toLowerCase() !== SUPER_ADMIN_EMAIL.toLowerCase()) {
+      throw new Error('O sistema está em Modo Lockdown (Edições temporariamente congeladas para manutenção). Apenas o Super Admin Davi Leonardo pode salvar alterações no momento.');
+    }
+
+    // Salva cópia da versão anterior no histórico (mantendo as 10 últimas)
+    try {
+      const historyItem = {
+        id: 'hist-' + Date.now(),
+        data: new Date().toISOString(),
+        autor: emailAtual,
+        descricao: `Edição realizada por ${emailAtual}`,
+        dados: JSON.parse(JSON.stringify(this.globalScreens))
+      };
+      await setDoc(doc(db, 'cms_history', historyItem.id), historyItem);
+    } catch (errHist) {
+      console.warn('Erro ao arquivar versão no histórico CMS:', errHist);
+    }
+
     const docRef = doc(db, 'cms_settings', 'global_screens');
     
     // Merge seguro com serverTimestamp() e updatedBy como exigido
@@ -924,6 +1080,31 @@ class GaditasProductionStore {
       emailAtual,
       'sistema'
     );
+  }
+
+  public atualizarGlobalScreensDraft(novosDados: Partial<GlobalScreensConfig>): void {
+    this.globalScreens = {
+      ...this.globalScreens,
+      ...novosDados
+    };
+    this.notify();
+  }
+
+  public async reverterVersaoCMS(historyId: string): Promise<void> {
+    const item = this.cmsHistory.find((h: any) => h.id === historyId);
+    if (!item || !item.dados) throw new Error('Versão de histórico não encontrada.');
+    await this.salvarGlobalScreens(item.dados);
+    await this.registrarAuditoria(
+      'CMS_ROLLBACK',
+      `Restaurada com sucesso a versão de ${item.data} criada por ${item.autor}`,
+      this.currentUser?.email || 'admin',
+      'alteracao'
+    );
+    this.notify();
+  }
+
+  public getCmsHistory(): any[] {
+    return this.cmsHistory;
   }
 
   public async restaurarPadraoGlobalScreens(tela?: 'todas' | 'home' | 'sobre' | 'matricula' | 'aluno' | 'global'): Promise<void> {
@@ -1410,6 +1591,10 @@ class GaditasProductionStore {
     const usuario = this.usuarios.find(u => u.id === userId);
     if (!usuario) throw new Error('Usuário não encontrado.');
 
+    if (usuario.email.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase() && dados.role && dados.role !== 'administrador_geral') {
+      throw new Error('A permissão do Super Admin Davi Leonardo não pode ser alterada.');
+    }
+
     const valorAntigo = JSON.stringify(usuario);
     await updateDoc(doc(db, 'usuarios', userId), dados);
     this.usuarios = this.usuarios.map(u => u.id === userId ? { ...u, ...dados } : u);
@@ -1891,8 +2076,8 @@ class GaditasProductionStore {
         tamanhoBytes: file.size,
         autor: this.currentUser?.email || this.currentAluno?.email || 'usuario',
         dataUpload: new Date().toISOString(),
-        alunoId: dados.alunoId,
-        descricao: dados.descricao
+        alunoId: (dados.alunoId && typeof dados.alunoId !== 'undefined') ? dados.alunoId : null,
+        descricao: dados.descricao || ''
       };
 
       const docRef = await addDoc(collection(db, 'arquivos'), novoArquivo);
@@ -1911,6 +2096,192 @@ class GaditasProductionStore {
     } catch (e: any) {
       throw new Error(`Falha no upload do arquivo: ${e?.message || 'Erro no Firebase Storage'}`);
     }
+  }
+
+  // ===== CADASTROS PENDENTES & APROVAÇÃO (RBAC) =====
+  public getCadastrosPendentes(): any[] {
+    return this.cadastrosPendentes;
+  }
+
+  public getContadorPendentes(): number {
+    return this.cadastrosPendentes.filter(c => c.status === 'pendente').length;
+  }
+
+  public async solicitarPreCadastro(dados: {
+    tipo: 'aluno' | 'professor';
+    nome: string;
+    email: string;
+    telefone: string;
+    cpf?: string;
+    ct: string;
+    faixa?: ProjardeBelt;
+    graus?: number;
+    observacoes?: string;
+    termoAceito: boolean;
+  }): Promise<any> {
+    const emailLimpo = dados.email.trim().toLowerCase();
+    
+    // Bloqueia duplicidade imediata
+    const jaExisteAluno = this.alunos.some(a => a.email.toLowerCase() === emailLimpo);
+    const jaExisteUser = this.usuarios.some(u => u.email.toLowerCase() === emailLimpo);
+    if (jaExisteAluno || jaExisteUser) {
+      throw new Error(`O e-mail ${emailLimpo} já se encontra cadastrado em nossa base.`);
+    }
+
+    const id = 'sol-' + Date.now();
+    const novo = {
+      ...dados,
+      id,
+      email: emailLimpo,
+      nome: dados.nome.trim(),
+      telefone: dados.telefone.trim(),
+      status: 'pendente',
+      dataSolicitacao: new Date().toISOString()
+    };
+
+    await setDoc(doc(db, 'cadastros_pendentes', id), novo);
+    this.cadastrosPendentes.unshift(novo);
+    await this.registrarAuditoria(
+      'SOLICITACAO_PRE_CADASTRO',
+      `Nova solicitação (${dados.tipo.toUpperCase()}): ${dados.nome} - Polo ${dados.ct}`,
+      emailLimpo,
+      'alteracao'
+    );
+    this.notify();
+    return novo;
+  }
+
+  public async aprovarCadastroPendente(id: string): Promise<void> {
+    const item = this.cadastrosPendentes.find(c => c.id === id);
+    if (!item) throw new Error('Solicitação pendente não localizada.');
+
+    const adminEmail = this.currentUser?.email || auth.currentUser?.email || 'admin';
+    await updateDoc(doc(db, 'cadastros_pendentes', id), {
+      status: 'aprovado',
+      aprovadoPor: adminEmail,
+      aprovadoEm: serverTimestamp()
+    });
+
+    if (item.tipo === 'aluno') {
+      await this.cadastrarAluno({
+        nome: item.nome,
+        email: item.email,
+        telefone: item.telefone,
+        cpf: item.cpf,
+        ct: item.ct,
+        faixa: item.faixa || 'Amarela',
+        graus: item.graus || 0,
+        termo_aceito: item.termoAceito
+      });
+    } else {
+      await this.criarUsuario({
+        nome: item.nome,
+        email: item.email,
+        telefone: item.telefone,
+        ct: item.ct,
+        role: 'professor'
+      });
+    }
+
+    item.status = 'aprovado';
+    await this.registrarAuditoria(
+      'CADASTRO_APROVADO',
+      `Solicitação de ${item.nome} (${item.tipo}) aprovada com sucesso`,
+      adminEmail,
+      'alteracao'
+    );
+    this.notify();
+  }
+
+  public async recusarCadastroPendente(id: string, motivo?: string): Promise<void> {
+    const item = this.cadastrosPendentes.find(c => c.id === id);
+    if (!item) throw new Error('Solicitação pendente não localizada.');
+
+    const adminEmail = this.currentUser?.email || auth.currentUser?.email || 'admin';
+    await updateDoc(doc(db, 'cadastros_pendentes', id), {
+      status: 'recusado',
+      recusadoPor: adminEmail,
+      motivoRecusa: motivo || 'Dados não aprovados pela coordenação',
+      recusadoEm: serverTimestamp()
+    });
+
+    item.status = 'recusado';
+    await this.registrarAuditoria(
+      'CADASTRO_RECUSADO',
+      `Solicitação de ${item.nome} recusada: ${motivo || 'Sem motivo especificado'}`,
+      adminEmail,
+      'alteracao'
+    );
+    this.notify();
+  }
+
+  // ===== EDIÇÃO DIRETA DE GUERREIROS E DOCENTES NO ERP =====
+  public async atualizarDadosAluno(id: string, dados: Partial<Aluno>): Promise<void> {
+    await updateDoc(doc(db, 'alunos', id), dados);
+    this.alunos = this.alunos.map(a => a.id === id ? { ...a, ...dados } : a);
+    await this.registrarAuditoria('EDITAR_ALUNO_DIRETO', `Dados cadastrais do aluno ${id} atualizados no ERP`, this.currentUser?.email || 'admin', 'alteracao');
+    this.notify();
+  }
+
+  // ===== GALERIA DOS GUERREIROS & INSTAGRAM FEED =====
+  public getGaleriaItems(): any[] {
+    return this.galeriaItems;
+  }
+
+  public async salvarGaleriaItem(item: any): Promise<void> {
+    await setDoc(doc(db, 'galeria', item.id), item, { merge: true });
+    const idx = this.galeriaItems.findIndex(g => g.id === item.id);
+    if (idx >= 0) {
+      this.galeriaItems[idx] = item;
+    } else {
+      this.galeriaItems.push(item);
+    }
+    this.notify();
+  }
+
+  public async removerGaleriaItem(id: string): Promise<void> {
+    await deleteDoc(doc(db, 'galeria', id));
+    this.galeriaItems = this.galeriaItems.filter(g => g.id !== id);
+    this.notify();
+  }
+
+  // ===== LEADS & INTERAÇÕES DO CHATBOT IA =====
+  public async salvarLeadAtendimento(lead: any): Promise<any> {
+    const id = lead.id || 'lead-' + Date.now();
+    const novo = {
+      id,
+      nome: lead.nome || 'Visitante',
+      contato: lead.contato || '',
+      poloInteresse: lead.poloInteresse || 'Geral',
+      duvidaPrincipal: lead.duvidaPrincipal || '',
+      historicoMensagens: lead.historicoMensagens || [],
+      data: new Date().toISOString(),
+      status: lead.status || 'novo'
+    };
+    await setDoc(doc(db, 'leads_atendimento', id), novo, { merge: true });
+    const idx = this.leadsAtendimento.findIndex(l => l.id === id);
+    if (idx >= 0) {
+      this.leadsAtendimento[idx] = novo;
+    } else {
+      this.leadsAtendimento.unshift(novo);
+    }
+    this.notify();
+    return novo;
+  }
+
+  public getLeadsAtendimento(): any[] {
+    return this.leadsAtendimento;
+  }
+
+  // ===== SANITIZAÇÃO DE TEXTOS & XSS PREVENTION =====
+  public sanitizeTexto(texto: string): string {
+    if (!texto) return '';
+    return texto
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/onload=/gi, '')
+      .replace(/onerror=/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
   }
 
   public async removerArquivo(id: string) {
@@ -2372,3 +2743,45 @@ class GaditasProductionStore {
 }
 
 export const store = new GaditasProductionStore();
+
+// Compressão automática e ultraleve via HTML5 Canvas em formato WebP
+export function comprimirImagemParaWebP(file: File | Blob, maxWidth = 800, maxHeight = 800, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file instanceof Blob ? file : new Blob([file]));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            resolve(file instanceof Blob ? file : new Blob([file]));
+          }
+        }, 'image/webp', quality);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}

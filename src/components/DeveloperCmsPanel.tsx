@@ -1318,7 +1318,7 @@ export const DeveloperCmsPanel: React.FC = () => {
 
                   <div className="border-t border-neutral-800 pt-4 space-y-2">
                     <label className="flex items-center justify-between p-3 rounded-xl bg-neutral-950 border border-neutral-800 cursor-pointer">
-                      <span className="text-xs font-bold text-neutral-200">Ativar Faixa de Notificação no Topo do Site</span>
+                      <span className="text-xs font-bold text-neutral-200">Ativar Faixa de Notificação / Aviso Global no Topo</span>
                       <input
                         type="checkbox"
                         checked={localScreens.global.notificacaoTopoAtiva}
@@ -1326,15 +1326,84 @@ export const DeveloperCmsPanel: React.FC = () => {
                         className="w-4 h-4 text-red-600 rounded bg-neutral-900 border-neutral-700"
                       />
                     </label>
+
                     {localScreens.global.notificacaoTopoAtiva && (
-                      <input
-                        type="text"
-                        value={localScreens.global.notificacaoTopoTexto}
-                        onChange={e => handleUpdateField('global', 'notificacaoTopoTexto', e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-amber-300 text-xs font-bold"
-                        placeholder="Texto que corre na faixa do topo do site"
-                      />
+                      <div className="space-y-3 p-3.5 bg-neutral-950 rounded-2xl border border-neutral-800">
+                        <div>
+                          <label className="text-[11px] font-bold text-neutral-400 uppercase block mb-1">
+                            Texto do Aviso Global
+                          </label>
+                          <input
+                            type="text"
+                            value={localScreens.global.notificacaoTopoTexto}
+                            onChange={e => handleUpdateField('global', 'notificacaoTopoTexto', e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-white text-xs font-bold"
+                            placeholder="Texto que corre na faixa do topo do site"
+                          />
+                        </div>
+
+                        {/* Seletor de Cores da Faixa */}
+                        <div>
+                          <label className="text-[11px] font-bold text-neutral-400 uppercase block mb-1.5">
+                            Cor da Faixa de Destaque
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {(['amarelo', 'vermelho', 'verde', 'azul'] as const).map((cor) => {
+                              const selecionada = (localScreens.global.notificacaoTopoCor || 'amarelo') === cor;
+                              const coresClasses = {
+                                amarelo: 'border-amber-400 text-amber-300 bg-amber-950/40',
+                                vermelho: 'border-red-500 text-red-300 bg-red-950/40',
+                                verde: 'border-emerald-500 text-emerald-300 bg-emerald-950/40',
+                                azul: 'border-sky-500 text-sky-300 bg-sky-950/40'
+                              }[cor];
+                              return (
+                                <button
+                                  key={cor}
+                                  type="button"
+                                  onClick={() => handleUpdateField('global', 'notificacaoTopoCor', cor)}
+                                  className={`px-3 py-2 rounded-xl text-xs font-black uppercase border transition-all cursor-pointer ${coresClasses} ${
+                                    selecionada ? 'ring-2 ring-white scale-102' : 'opacity-70 hover:opacity-100'
+                                  }`}
+                                >
+                                  {cor}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Agendamento / Data Limite */}
+                        <div>
+                          <label className="text-[11px] font-bold text-neutral-400 uppercase block mb-1">
+                            Agendamento / Data de Expiração (Opcional)
+                          </label>
+                          <input
+                            type="date"
+                            value={localScreens.global.notificacaoDataExpiracao || ''}
+                            onChange={e => handleUpdateField('global', 'notificacaoDataExpiracao', e.target.value)}
+                            className="w-full px-4 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300 text-xs"
+                          />
+                        </div>
+                      </div>
                     )}
+                  </div>
+
+                  {/* Configuração do Atendente Virtual IA */}
+                  <div className="border-t border-neutral-800 pt-4 space-y-2">
+                    <label className="text-xs font-black uppercase text-amber-400 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      <span>Mensagem de Boas-Vindas do Atendente Virtual IA</span>
+                    </label>
+                    <p className="text-[11px] text-neutral-400">
+                      Personalize a saudação inicial que novos visitantes visualizam ao abrir o assistente virtual na tela inicial:
+                    </p>
+                    <textarea
+                      rows={3}
+                      value={localScreens.global.chatbotBoasVindas || ''}
+                      onChange={e => handleUpdateField('global', 'chatbotBoasVindas', e.target.value)}
+                      placeholder="Oss! Seja muito bem-vindo à Equipe Gaditas Fight Team!..."
+                      className="w-full px-4 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-200 text-xs leading-relaxed"
+                    />
                   </div>
 
                   <div className="border-t border-neutral-800 pt-4 space-y-1">

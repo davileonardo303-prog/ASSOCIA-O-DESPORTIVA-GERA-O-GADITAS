@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { 
   getStorage, 
@@ -11,12 +11,41 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+const dbId = (firebaseConfig as any)?.firestoreDatabaseId || undefined;
+let firestoreInstance;
+try {
+  firestoreInstance = dbId
+    ? initializeFirestore(app, { ignoreUndefinedProperties: true }, dbId)
+    : initializeFirestore(app, { ignoreUndefinedProperties: true });
+} catch {
+  firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
+}
 
+export const db = firestoreInstance;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+// Tratamento amigável e preventivo de domínios não autorizados e outros erros do Auth
+export function tratarErroAuth(error: any): string {
+  if (!error) return 'Erro desconhecido na autenticação.';
+  const code = error.code || '';
+  if (code.includes('auth/unauthorized-domain')) {
+    return 'Domínio não autorizado no Firebase Authentication. Para habilitar em produção (Vercel/Hosting), adicione este domínio em Firebase Console > Authentication > Settings > Authorized Domains.';
+  }
+  if (code.includes('auth/user-not-found') || code.includes('auth/wrong-password') || code.includes('auth/invalid-credential')) {
+    return 'E-mail ou senha incorretos.';
+  }
+  if (code.includes('auth/email-already-in-use')) {
+    return 'Este e-mail já está cadastrado em nosso sistema.';
+  }
+  if (code.includes('auth/popup-closed-by-user')) {
+    return 'A janela de autenticação Google foi fechada antes de finalizar.';
+  }
+  if (code.includes('auth/network-request-failed')) {
+    return 'Falha de conexão com os servidores do Firebase. Verifique sua internet.';
+  }
+  return error.message || 'Falha ao autenticar. Tente novamente em instantes.';
+}
 
 export enum OperationType {
   CREATE = 'create',

@@ -125,7 +125,7 @@ export interface ArquivoItem {
   tamanhoBytes?: number;
   autor: string;
   dataUpload: string;
-  alunoId?: string;
+  alunoId?: string | null;
   descricao?: string;
 }
 
@@ -242,6 +242,14 @@ export interface HomeScreenConfig {
   ctaBannerTitulo: string;
   ctaBannerTexto: string;
   ctaBannerBotao: string;
+  heroVisivel?: boolean;
+  modalidadesVisivel?: boolean;
+  horariosVisivel?: boolean;
+  polosVisivel?: boolean;
+  ctaBannerVisivel?: boolean;
+  heroImagemUrl?: string;
+  modalidade1FotoUrl?: string;
+  modalidade2FotoUrl?: string;
 }
 
 export interface SobreScreenConfig {
@@ -293,6 +301,9 @@ export interface GlobalSiteConfig {
   emailContato: string;
   notificacaoTopoAtiva: boolean;
   notificacaoTopoTexto: string;
+  notificacaoTopoCor?: 'amarelo' | 'vermelho' | 'verde' | 'azul';
+  notificacaoDataExpiracao?: string;
+  chatbotBoasVindas?: string;
   rodapeTexto: string;
 }
 
@@ -307,3 +318,73 @@ export interface GlobalScreensConfig {
 }
 
 export type Professor = UsuarioSistema;
+
+export interface CadastroPendente {
+  id: string;
+  tipo: 'aluno' | 'professor';
+  nome: string;
+  email: string;
+  telefone: string;
+  cpf?: string;
+  ct: string;
+  status: 'pendente' | 'aprovado' | 'recusado';
+  faixa?: ProjardeBelt;
+  graus?: number;
+  dataSolicitacao: string;
+  observacoes?: string;
+  termoAceito: boolean;
+}
+
+export interface LeadAtendimento {
+  id: string;
+  nome?: string;
+  contato?: string;
+  poloInteresse?: string;
+  duvidaPrincipal?: string;
+  historicoMensagens: { autor: 'user' | 'ia'; texto: string; timestamp: string }[];
+  data: string;
+  status: 'novo' | 'em_atendimento' | 'convertido';
+}
+
+export interface ChatbotConfig {
+  ativo: boolean;
+  nomeAtendente: string;
+  mensagemBoasVindas: string;
+  resumoPrompt?: string;
+  whatsappDestino?: string;
+}
+
+export interface CMSHistoryItem {
+  id: string;
+  data: string;
+  autor: string;
+  descricao: string;
+  dados: GlobalScreensConfig;
+}
+
+export interface GaleriaItem {
+  id: string;
+  titulo: string;
+  categoria: 'campeonatos' | 'cinturoes' | 'treinos' | 'instagram';
+  url: string;
+  legenda?: string;
+  instagramPostUrl?: string;
+  ordem?: number;
+  estilo?: {
+    larguraPercentual?: number;
+    alturaPx?: number;
+    encaixe?: 'cover' | 'contain';
+    focoX?: number;
+    focoY?: number;
+    zoom?: number;
+    rotacao?: number;
+    overlayEscuro?: number;
+  };
+}
+
+export interface AvisoGlobalConfig {
+  ativo: boolean;
+  texto: string;
+  cor: 'vermelho' | 'amarelo' | 'verde' | 'azul';
+  dataLimiteExibicao?: string;
+}

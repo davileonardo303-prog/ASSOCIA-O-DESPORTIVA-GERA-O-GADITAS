@@ -3,6 +3,8 @@ import { Shield, Menu, X, User, Lock, Award, ArrowRight, Bell, UserCheck, LogOut
 import { Aluno } from '../types';
 import { store } from '../services/store';
 
+import lionEmblemImg from '../assets/images/gaditas_lion_emblem_1791983074366.jpg';
+
 interface NavbarProps {
   currentView: string;
   onNavigate: (view: string) => void;
@@ -24,9 +26,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [siteConfig, setSiteConfig] = useState(() => store.getSiteConfig());
   const [impersonado, setImpersonado] = useState(() => store.getUsuarioImpersonado());
 
+  const [globalScreens, setGlobalScreens] = useState(() => store.getGlobalScreens());
+
   React.useEffect(() => {
     const unsub = store.subscribe(() => {
       setSiteConfig(store.getSiteConfig());
+      setGlobalScreens(store.getGlobalScreens());
       setImpersonado(store.getUsuarioImpersonado());
     });
     return unsub;
@@ -36,6 +41,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     onNavigate(view);
     setMobileMenuOpen(false);
   };
+
+  const avisoAtivo = (globalScreens?.global?.notificacaoTopoAtiva && globalScreens?.global?.notificacaoTopoTexto) || (siteConfig.notificacoesAtivas && siteConfig.notificacaoTexto);
+  const textoAviso = globalScreens?.global?.notificacaoTopoTexto || siteConfig.notificacaoTexto || '';
+  const corAviso = globalScreens?.global?.notificacaoTopoCor || 'amarelo';
+  const expiracao = globalScreens?.global?.notificacaoDataExpiracao;
+  const expirado = expiracao ? new Date(expiracao + 'T23:59:59').getTime() < Date.now() : false;
+
+  const bgCorClasses = {
+    amarelo: 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-black',
+    vermelho: 'bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-white',
+    verde: 'bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-700 text-white',
+    azul: 'bg-gradient-to-r from-sky-700 via-sky-600 to-sky-700 text-white'
+  }[corAviso] || 'bg-gradient-to-r from-red-700 via-amber-600 to-red-700 text-white';
 
   return (
     <>
@@ -59,11 +77,11 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       )}
 
-      {/* Barra de Notificação Global configurada no CMS */}
-      {siteConfig.notificacoesAtivas && siteConfig.notificacaoTexto && (
-        <div className="bg-gradient-to-r from-red-700 via-amber-600 to-red-700 text-white text-[11px] font-black uppercase tracking-wider py-1.5 px-4 text-center shadow-md flex items-center justify-center gap-2">
-          <Bell className="w-3.5 h-3.5 text-amber-200 animate-bounce" />
-          <span>{siteConfig.notificacaoTexto}</span>
+      {/* Barra de Notificação Global configurada no CMS com cores e agendamento */}
+      {avisoAtivo && !expirado && (
+        <div className={`${bgCorClasses} text-[11px] font-black uppercase tracking-wider py-1.5 px-4 text-center shadow-md flex items-center justify-center gap-2 transition-colors`}>
+          <Bell className="w-3.5 h-3.5 animate-bounce" />
+          <span>{textoAviso}</span>
         </div>
       )}
 
@@ -75,17 +93,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => handleNav('home')}
             className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer"
           >
-            {siteConfig.logoUrl ? (
-              <img 
-                src={siteConfig.logoUrl} 
-                alt="Logo Equipe Gaditas" 
-                className="w-10 h-10 object-contain rounded-xl border border-red-500/30 p-0.5 bg-neutral-900" 
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-600 via-red-700 to-neutral-900 p-0.5 shadow-lg shadow-red-950/40 flex items-center justify-center border border-red-500/30">
-                <Shield className="w-5 h-5 text-amber-400 group-hover:scale-110 transition-transform" />
-              </div>
-            )}
+            <img 
+              src={siteConfig.logoUrl || lionEmblemImg} 
+              alt="Logo Oficial Equipe Gaditas" 
+              className="w-11 h-11 object-contain rounded-full border border-amber-500/50 p-0.5 bg-black shadow-md shadow-amber-500/20 group-hover:scale-105 transition-transform" 
+            />
             <div className="flex flex-col">
               <span className="text-base sm:text-lg font-black tracking-tight text-white uppercase leading-none">
                 {siteConfig.nomeSite ? (
@@ -143,8 +155,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               Matrícula Online
             </button>
 
-            {/* Links Dinâmicos do CMS */}
-            {siteConfig.menuItens?.filter(m => m.ativo ?? m.visivel).map(item => {
+            {/* Links Dinâmicos do CMS (Apenas os públicos ou permitidos) */}
+            {siteConfig.menuItens?.filter(m => (m.ativo ?? m.visivel) && !['admin-portal', 'saude-firebase', 'painel-dev', 'cms'].includes(m.viewOuLink || m.url || '')).map(item => {
               const urlDestino = item.url || item.viewOuLink || 'home';
               const tituloMenu = item.titulo || item.label || 'Link';
               return (
@@ -168,29 +180,34 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
-            <button
-              onClick={() => handleNav('saude-firebase')}
-              className={`transition-colors py-1 border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'saude-firebase'
-                  ? 'text-emerald-400 border-emerald-500'
-                  : 'border-transparent text-neutral-400 hover:text-emerald-400'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Saúde Firebase</span>
-            </button>
+            {/* Ferramentas Administrativas: EXCLUSIVAS PARA ADMINISTRADORES AUTENTICADOS (RBAC) */}
+            {adminLogado && (adminLogado.isAdmin || store.isUsuarioAdminGeral()) && (
+              <>
+                <button
+                  onClick={() => handleNav('saude-firebase')}
+                  className={`transition-colors py-1 border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                    currentView === 'saude-firebase'
+                      ? 'text-emerald-400 border-emerald-500'
+                      : 'border-transparent text-neutral-400 hover:text-emerald-400'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Saúde Firebase</span>
+                </button>
 
-            <button
-              onClick={() => handleNav('painel-dev')}
-              className={`transition-colors py-1 border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                currentView === 'painel-dev'
-                  ? 'text-amber-400 border-amber-500 font-bold'
-                  : 'border-transparent text-neutral-400 hover:text-amber-400'
-              }`}
-            >
-              <Code className="w-3.5 h-3.5 text-amber-400" />
-              <span>CMS Visual</span>
-            </button>
+                <button
+                  onClick={() => handleNav('painel-dev')}
+                  className={`transition-colors py-1 border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                    currentView === 'painel-dev'
+                      ? 'text-amber-400 border-amber-500 font-bold'
+                      : 'border-transparent text-neutral-400 hover:text-amber-400'
+                  }`}
+                >
+                  <Code className="w-3.5 h-3.5 text-amber-400" />
+                  <span>CMS Visual</span>
+                </button>
+              </>
+            )}
           </nav>
 
           {/* Zone 3: Primary Action & Session Portals */}
@@ -270,10 +287,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={() => handleNav('admin-portal')}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-950/50 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider bg-neutral-900/80 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-800 transition-all cursor-pointer"
               >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Painel Professor</span>
+                <Lock className="w-3.5 h-3.5 text-neutral-400" />
+                <span>Docente / Login</span>
               </button>
             )}
           </div>
@@ -328,8 +345,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Matrícula
               </button>
 
-              {/* Menu items dinâmicos */}
-              {siteConfig.menuItens?.filter(m => m.ativo ?? m.visivel).map(item => {
+              {/* Menu items dinâmicos públicos */}
+              {siteConfig.menuItens?.filter(m => (m.ativo ?? m.visivel) && !['admin-portal', 'saude-firebase', 'painel-dev', 'cms'].includes(m.viewOuLink || m.url || '')).map(item => {
                 const urlDestino = item.url || item.viewOuLink || 'home';
                 const tituloMenu = item.titulo || item.label || 'Link';
                 return (
@@ -345,25 +362,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                 );
               })}
 
-              <button
-                onClick={() => handleNav('saude-firebase')}
-                className={`p-3 text-left rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${
-                  currentView === 'saude-firebase' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/40' : 'bg-neutral-900 text-neutral-300'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Saúde Firebase</span>
-              </button>
+              {/* Ferramentas de Admin no Mobile: SOMENTE SE LOGADO COMO ADMIN */}
+              {adminLogado && (adminLogado.isAdmin || store.isUsuarioAdminGeral()) && (
+                <>
+                  <button
+                    onClick={() => handleNav('saude-firebase')}
+                    className={`p-3 text-left rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${
+                      currentView === 'saude-firebase' ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/40' : 'bg-neutral-900 text-neutral-300'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Saúde Firebase</span>
+                  </button>
 
-              <button
-                onClick={() => handleNav('painel-dev')}
-                className={`p-3 text-left rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${
-                  currentView === 'painel-dev' ? 'bg-amber-950/40 text-amber-400 border border-amber-500/40' : 'bg-neutral-900 text-amber-400'
-                }`}
-              >
-                <Code className="w-3.5 h-3.5" />
-                <span>CMS Visual</span>
-              </button>
+                  <button
+                    onClick={() => handleNav('painel-dev')}
+                    className={`p-3 text-left rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${
+                      currentView === 'painel-dev' ? 'bg-amber-950/40 text-amber-400 border border-amber-500/40' : 'bg-neutral-900 text-amber-400'
+                    }`}
+                  >
+                    <Code className="w-3.5 h-3.5" />
+                    <span>CMS Visual</span>
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="pt-1 flex flex-col gap-2">
